@@ -1,0 +1,27 @@
+
+
+
+Instead of thinking about drawing commands in terms of bytes, what if I broke down all possible
+information into the exact bits I need and can be configured.
+
+Every X/Y coordinate should be defined beforehand.
+Every possible stroke width should be defined.
+
+Let's have values represent cross sections.
+
+So if you're drawing something towrad the right that needs a left boundary, then a
+value of 0 would include the leftmost pixel in the bounding box.  A value of 1
+would exclude the left-most pixel.
+
+
+That means we have 256 grid lines, which covers 255 pixels.
+
+Ever drawing operation will relative to a grid line.
+
+A: 
+    stroke_diag: left_start=cap_left bottom_start=baseline left_end=a_left top_end=cap_top stroke_width=cap_width 
+    stroke_horz: top=cap_bar_top left=?? right=center stroke_width=cap_width 
+    reflect
+B:
+    stroke_vert: top=cap_top bottom=baseline stroke_width=cap_width
+    stroke_horz: left=cap_left
