@@ -387,6 +387,7 @@ fn coordFromBaseX(w: u16, x: glyphs.BaseX) f32 {
     const large_enough_value: f32 = switch (x) {
         .uppercase_left => uppercase_left,
         .bottom_bar_left => bottom_bar_left,
+        ._1_slanty_left => 0.210,
         .center => 0.5,
         .bottom_bar_right => 1.0 - bottom_bar_left,
         .uppercase_right => 1.0 - uppercase_left,
@@ -409,6 +410,7 @@ fn coordFromBaseY(h: u16, y: glyphs.BaseY) f32 {
     const large_enough_value: f32 = switch (y) {
         .uppercase_top => 0.065,
         .lowercase_dot_bottom => 0.199,
+        ._1_slanty_bottom => 0.266,
         .lowercase_top => 0.280,
         .uppercase_midline_center => 0.418,
         .baseline => 0.8,

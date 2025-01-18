@@ -1,6 +1,7 @@
 pub const BaseX = enum {
     uppercase_left,
     bottom_bar_left,
+    _1_slanty_left,
     center,
     bottom_bar_right,
     uppercase_right,
@@ -8,6 +9,7 @@ pub const BaseX = enum {
 pub const BaseY = enum {
     uppercase_top,
     lowercase_dot_bottom,
+    _1_slanty_bottom,
     lowercase_top,
     uppercase_midline_center,
     baseline,
@@ -106,7 +108,10 @@ pub const todo = [_]Op{.{ .op = .todo }};
 pub const c = struct {
     pub const @"1" = [_]Op{
         .{ .op = .{ .stroke_vert = .{ .x = .{ .center = .{ .base = .center } }, .top = .{ .base = .uppercase_top }, .bottom = .{ .base = .baseline } } } },
-        // TODO: draw the little slanty top part
+        // slanty's line cap looks wrong, need new line cap support
+        .{ .op = .{ .stroke_diag = .{ .left = .{ .base = ._1_slanty_left }, .top = .{ .base = .uppercase_top }, .right = .{ .base = .center, .offset = .@"0.5" }, .bottom = .{
+            .base = ._1_slanty_bottom,
+        }, .slope_ltr = .ascend, .left_attach = .x, .right_attach = .y } } },
         .{ .condition = ._1_has_bottom_bar, .op = .{ .stroke_horz = .{ .y = .{ .bottom = .{ .base = .baseline } }, .left = .{ .base = .bottom_bar_left }, .right = .{ .base = .bottom_bar_right } } } },
     };
     pub const H = [_]Op{

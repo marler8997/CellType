@@ -25,3 +25,7 @@ A:
 B:
     stroke_vert: top=cap_top bottom=baseline stroke_width=cap_width
     stroke_horz: left=cap_left
+
+// Parameteters
+
+"dot size" (size of the dot above the lowercase i for example)
