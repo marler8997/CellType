@@ -167,7 +167,7 @@ const Extent = struct {
     }
     pub fn initStrokeY(w: u16, h: u16, y: glyphs.StrokeY) Extent {
         const stroke_width = getStrokeWidth(w);
-        const coord = coordFromY(h, y.value());
+        const coord = coordFromY(w, h, y.value());
         const rounded_coord: u16 = @intFromFloat(@round(coord));
         const diff: struct { sub: u16, add: u16 } = blk: {
             switch (y) {
@@ -196,9 +196,9 @@ const shaders = struct {
             col,
             row,
             extent_x.low,
-            roundedCoordFromY(h, s.top),
+            roundedCoordFromY(w, h, s.top),
             extent_x.high,
-            roundedCoordFromY(h, s.bottom),
+            roundedCoordFromY(w, h, s.bottom),
         );
     }
     fn stroke_horz(w: u16, h: u16, col: u16, row: u16, s: *const glyphs.StrokeHorz) u8 {
@@ -221,8 +221,8 @@ const shaders = struct {
                 .high = roundedCoordFromX(w, s.right),
             },
             .{
-                .low = roundedCoordFromY(h, s.top),
-                .high = roundedCoordFromY(h, s.bottom),
+                .low = roundedCoordFromY(w, h, s.top),
+                .high = roundedCoordFromY(w, h, s.bottom),
             },
             s.slope_ltr,
             s.left_attach,
@@ -376,6 +376,10 @@ fn roundedCoordFromX(w: u16, x: glyphs.X) u16 {
     return @intFromFloat(@round(coordFromX(w, x)));
 }
 fn coordFromX(w: u16, x: glyphs.X) f32 {
+    const base_x = coordFromBaseX(w, x.base);
+    return base_x + x.offset.getFactor() * @as(f32, @floatFromInt(getStrokeWidth(w)));
+}
+fn coordFromBaseX(w: u16, x: glyphs.BaseX) f32 {
     // if x is large enough, we just always use the same floating point
     // multiplier for the position
     const uppercase_left = 0.124;
@@ -392,10 +396,14 @@ fn coordFromX(w: u16, x: glyphs.X) f32 {
     //return @intFromFloat(@round(large_enough_value * @as(f32, @floatFromInt(w))));
 }
 
-fn roundedCoordFromY(h: u16, x: glyphs.Y) u16 {
-    return @intFromFloat(@round(coordFromY(h, x)));
+fn roundedCoordFromY(w: u16, h: u16, x: glyphs.Y) u16 {
+    return @intFromFloat(@round(coordFromY(w, h, x)));
 }
-fn coordFromY(h: u16, y: glyphs.Y) f32 {
+fn coordFromY(w: u16, h: u16, y: glyphs.Y) f32 {
+    const base_y = coordFromBaseY(h, y.base);
+    return base_y + y.offset.getFactor() * @as(f32, @floatFromInt(getStrokeWidth(w)));
+}
+fn coordFromBaseY(h: u16, y: glyphs.BaseY) f32 {
     // if y is large enough, we just always use the same floating point
     // multiplier for the position
     const large_enough_value: f32 = switch (y) {

@@ -1,18 +1,37 @@
-pub const X = enum {
-    // //zero,
+pub const BaseX = enum {
     uppercase_left,
     bottom_bar_left,
     center,
     bottom_bar_right,
     uppercase_right,
 };
-pub const Y = enum {
+pub const BaseY = enum {
     uppercase_top,
     lowercase_dot_bottom,
     lowercase_top,
     uppercase_midline_center,
     baseline,
 };
+
+pub const StrokeOffset = enum {
+    @"-1",
+    @"-0.5",
+    @"0",
+    @"0.5",
+    @"1",
+    pub fn getFactor(self: StrokeOffset) f32 {
+        return switch (self) {
+            .@"-1" => -1,
+            .@"-0.5" => -0.5,
+            .@"0" => 0,
+            .@"0.5" => 0.5,
+            .@"1" => 1,
+        };
+    }
+};
+
+pub const X = struct { base: BaseX, offset: StrokeOffset = .@"0" };
+pub const Y = struct { base: BaseY, offset: StrokeOffset = .@"0" };
 
 pub const StrokeX = union(enum) {
     left: X,
@@ -86,27 +105,27 @@ pub const Op = struct {
 pub const todo = [_]Op{.{ .op = .todo }};
 pub const c = struct {
     pub const @"1" = [_]Op{
-        .{ .op = .{ .stroke_vert = .{ .x = .{ .center = .center }, .top = .uppercase_top, .bottom = .baseline } } },
+        .{ .op = .{ .stroke_vert = .{ .x = .{ .center = .{ .base = .center } }, .top = .{ .base = .uppercase_top }, .bottom = .{ .base = .baseline } } } },
         // TODO: draw the little slanty top part
-        .{ .condition = ._1_has_bottom_bar, .op = .{ .stroke_horz = .{ .y = .{ .bottom = .baseline }, .left = .bottom_bar_left, .right = .bottom_bar_right } } },
+        .{ .condition = ._1_has_bottom_bar, .op = .{ .stroke_horz = .{ .y = .{ .bottom = .{ .base = .baseline } }, .left = .{ .base = .bottom_bar_left }, .right = .{ .base = .bottom_bar_right } } } },
     };
     pub const H = [_]Op{
-        .{ .op = .{ .stroke_vert = .{ .x = .{ .left = .uppercase_left }, .top = .uppercase_top, .bottom = .baseline } } },
-        .{ .op = .{ .stroke_vert = .{ .x = .{ .right = .uppercase_right }, .top = .uppercase_top, .bottom = .baseline } } },
-        .{ .op = .{ .stroke_horz = .{ .y = .{ .center = .uppercase_midline_center }, .left = .uppercase_left, .right = .uppercase_right } } },
+        .{ .op = .{ .stroke_vert = .{ .x = .{ .left = .{ .base = .uppercase_left } }, .top = .{ .base = .uppercase_top }, .bottom = .{ .base = .baseline } } } },
+        .{ .op = .{ .stroke_vert = .{ .x = .{ .right = .{ .base = .uppercase_right } }, .top = .{ .base = .uppercase_top }, .bottom = .{ .base = .baseline } } } },
+        .{ .op = .{ .stroke_horz = .{ .y = .{ .center = .{ .base = .uppercase_midline_center } }, .left = .{ .base = .uppercase_left }, .right = .{ .base = .uppercase_right } } } },
     };
     pub const i = [_]Op{
-        .{ .op = .{ .stroke_dot = .{ .x = .{ .center = .center }, .y = .{ .bottom = .lowercase_dot_bottom } } } },
-        .{ .op = .{ .stroke_vert = .{ .x = .{ .center = .center }, .top = .lowercase_top, .bottom = .baseline } } },
+        .{ .op = .{ .stroke_dot = .{ .x = .{ .center = .{ .base = .center } }, .y = .{ .bottom = .{ .base = .lowercase_dot_bottom } } } } },
+        .{ .op = .{ .stroke_vert = .{ .x = .{ .center = .{ .base = .center } }, .top = .{ .base = .lowercase_top }, .bottom = .{ .base = .baseline } } } },
     };
     pub const N = [_]Op{
-        .{ .op = .{ .stroke_vert = .{ .x = .{ .left = .uppercase_left }, .top = .uppercase_top, .bottom = .baseline } } },
-        .{ .op = .{ .stroke_vert = .{ .x = .{ .right = .uppercase_right }, .top = .uppercase_top, .bottom = .baseline } } },
-        .{ .op = .{ .stroke_diag = .{ .left = .uppercase_left, .top = .uppercase_top, .right = .uppercase_right, .bottom = .baseline, .slope_ltr = .descend, .left_attach = .y, .right_attach = .y } } },
+        .{ .op = .{ .stroke_vert = .{ .x = .{ .left = .{ .base = .uppercase_left } }, .top = .{ .base = .uppercase_top }, .bottom = .{ .base = .baseline } } } },
+        .{ .op = .{ .stroke_vert = .{ .x = .{ .right = .{ .base = .uppercase_right } }, .top = .{ .base = .uppercase_top }, .bottom = .{ .base = .baseline } } } },
+        .{ .op = .{ .stroke_diag = .{ .left = .{ .base = .uppercase_left }, .top = .{ .base = .uppercase_top }, .right = .{ .base = .uppercase_right }, .bottom = .{ .base = .baseline }, .slope_ltr = .descend, .left_attach = .y, .right_attach = .y } } },
     };
     pub const Z = [_]Op{
-        .{ .op = .{ .stroke_horz = .{ .y = .{ .top = .uppercase_top }, .left = .uppercase_left, .right = .uppercase_right } } },
-        .{ .op = .{ .stroke_horz = .{ .y = .{ .bottom = .baseline }, .left = .uppercase_left, .right = .uppercase_right } } },
-        .{ .op = .{ .stroke_diag = .{ .left = .uppercase_left, .top = .uppercase_top, .right = .uppercase_right, .bottom = .baseline, .slope_ltr = .ascend, .left_attach = .x, .right_attach = .x } } },
+        .{ .op = .{ .stroke_horz = .{ .y = .{ .top = .{ .base = .uppercase_top } }, .left = .{ .base = .uppercase_left }, .right = .{ .base = .uppercase_right } } } },
+        .{ .op = .{ .stroke_horz = .{ .y = .{ .bottom = .{ .base = .baseline } }, .left = .{ .base = .uppercase_left }, .right = .{ .base = .uppercase_right } } } },
+        .{ .op = .{ .stroke_diag = .{ .left = .{ .base = .uppercase_left }, .top = .{ .base = .uppercase_top, .offset = .@"1" }, .right = .{ .base = .uppercase_right }, .bottom = .{ .base = .baseline, .offset = .@"-1" }, .slope_ltr = .ascend, .left_attach = .y, .right_attach = .y } } },
     };
 };
