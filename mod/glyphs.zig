@@ -35,6 +35,23 @@ pub const StrokeOffset = enum {
 pub const X = struct { base: BaseX, offset: StrokeOffset = .@"0" };
 pub const Y = struct { base: BaseY, offset: StrokeOffset = .@"0" };
 
+// Disables draw commands that follow based on a vertical or horizontal boundary.
+// Has no effect on draw commands that come before.
+pub const Clip = union(enum) {
+    left: ClipX,
+    right: ClipX,
+    top: ClipY,
+    bottom: ClipY,
+};
+
+pub const ClipX = struct {
+    x: X,
+    // The number of draw commands that follow to apply the clip to. If count is
+    // 0 then it applies to all the following draw operations.
+    count: u8 = 0,
+};
+pub const ClipY = struct { y: Y, count: u8 = 0 };
+
 pub const StrokeX = union(enum) {
     left: X,
     center: X,
@@ -64,21 +81,11 @@ pub const StrokePoint = struct {
     y: StrokeY,
 };
 
-pub const StrokeVert = struct {
-    x: StrokeX,
-    top: Y,
-    bottom: Y,
-};
-pub const StrokeHorz = struct {
-    y: StrokeY,
-    left: X,
-    right: X,
-};
-
 pub const Dimension = enum { x, y };
 pub const Ascent = enum { ascend, descend };
 
 pub const StrokeDiag = struct {
+    // TODO: simplify this now that we have Clip
     left: X,
     top: Y,
     right: X,
@@ -97,8 +104,9 @@ pub const Op = struct {
     condition: Condition = .yes,
     op: union(enum) {
         todo: void,
-        stroke_vert: StrokeVert,
-        stroke_horz: StrokeHorz,
+        clip: Clip,
+        stroke_vert: StrokeX,
+        stroke_horz: StrokeY,
         stroke_diag: StrokeDiag,
         stroke_dot: StrokePoint,
     },
@@ -107,30 +115,46 @@ pub const Op = struct {
 pub const todo = [_]Op{.{ .op = .todo }};
 pub const c = struct {
     pub const @"1" = [_]Op{
-        .{ .op = .{ .stroke_vert = .{ .x = .{ .center = .{ .base = .center } }, .top = .{ .base = .uppercase_top }, .bottom = .{ .base = .baseline } } } },
+        .{ .op = .{ .clip = .{ .top = .{ .y = .{ .base = .uppercase_top } } } } },
+        .{ .op = .{ .clip = .{ .bottom = .{ .y = .{ .base = .baseline } } } } },
         // slanty's line cap looks wrong, need new line cap support
-        .{ .op = .{ .stroke_diag = .{ .left = .{ .base = ._1_slanty_left }, .top = .{ .base = .uppercase_top }, .right = .{ .base = .center, .offset = .@"0.5" }, .bottom = .{
-            .base = ._1_slanty_bottom,
-        }, .slope_ltr = .ascend, .left_attach = .x, .right_attach = .y } } },
-        .{ .condition = ._1_has_bottom_bar, .op = .{ .stroke_horz = .{ .y = .{ .bottom = .{ .base = .baseline } }, .left = .{ .base = .bottom_bar_left }, .right = .{ .base = .bottom_bar_right } } } },
+        .{ .op = .{ .stroke_diag = .{ .left = .{ .base = ._1_slanty_left }, .top = .{ .base = .uppercase_top }, .right = .{ .base = .center, .offset = .@"0.5" }, .bottom = .{ .base = ._1_slanty_bottom }, .slope_ltr = .ascend, .left_attach = .x, .right_attach = .y } } },
+        .{ .op = .{ .clip = .{ .left = .{ .x = .{ .base = .bottom_bar_left } } } } },
+        .{ .op = .{ .clip = .{ .right = .{ .x = .{ .base = .bottom_bar_right } } } } },
+        .{ .op = .{ .stroke_vert = .{ .center = .{ .base = .center } } } },
+        .{ .condition = ._1_has_bottom_bar, .op = .{ .stroke_horz = .{ .bottom = .{ .base = .baseline } } } },
     };
     pub const H = [_]Op{
-        .{ .op = .{ .stroke_vert = .{ .x = .{ .left = .{ .base = .uppercase_left } }, .top = .{ .base = .uppercase_top }, .bottom = .{ .base = .baseline } } } },
-        .{ .op = .{ .stroke_vert = .{ .x = .{ .right = .{ .base = .uppercase_right } }, .top = .{ .base = .uppercase_top }, .bottom = .{ .base = .baseline } } } },
-        .{ .op = .{ .stroke_horz = .{ .y = .{ .center = .{ .base = .uppercase_midline_center } }, .left = .{ .base = .uppercase_left }, .right = .{ .base = .uppercase_right } } } },
+        .{ .op = .{ .clip = .{ .left = .{ .x = .{ .base = .uppercase_left } } } } },
+        .{ .op = .{ .clip = .{ .right = .{ .x = .{ .base = .uppercase_right } } } } },
+        .{ .op = .{ .clip = .{ .top = .{ .y = .{ .base = .uppercase_top } } } } },
+        .{ .op = .{ .clip = .{ .bottom = .{ .y = .{ .base = .baseline } } } } },
+        .{ .op = .{ .stroke_vert = .{ .left = .{ .base = .uppercase_left } } } },
+        .{ .op = .{ .stroke_vert = .{ .right = .{ .base = .uppercase_right } } } },
+        .{ .op = .{ .stroke_horz = .{ .center = .{ .base = .uppercase_midline_center } } } },
     };
     pub const i = [_]Op{
+        .{ .op = .{ .clip = .{ .bottom = .{ .y = .{ .base = .baseline } } } } },
         .{ .op = .{ .stroke_dot = .{ .x = .{ .center = .{ .base = .center } }, .y = .{ .bottom = .{ .base = .lowercase_dot_bottom } } } } },
-        .{ .op = .{ .stroke_vert = .{ .x = .{ .center = .{ .base = .center } }, .top = .{ .base = .lowercase_top }, .bottom = .{ .base = .baseline } } } },
+        .{ .op = .{ .clip = .{ .top = .{ .y = .{ .base = .lowercase_top } } } } },
+        .{ .op = .{ .stroke_vert = .{ .center = .{ .base = .center } } } },
     };
     pub const N = [_]Op{
-        .{ .op = .{ .stroke_vert = .{ .x = .{ .left = .{ .base = .uppercase_left } }, .top = .{ .base = .uppercase_top }, .bottom = .{ .base = .baseline } } } },
-        .{ .op = .{ .stroke_vert = .{ .x = .{ .right = .{ .base = .uppercase_right } }, .top = .{ .base = .uppercase_top }, .bottom = .{ .base = .baseline } } } },
+        .{ .op = .{ .clip = .{ .left = .{ .x = .{ .base = .uppercase_left } } } } },
+        .{ .op = .{ .clip = .{ .right = .{ .x = .{ .base = .uppercase_right } } } } },
+        .{ .op = .{ .clip = .{ .top = .{ .y = .{ .base = .uppercase_top } } } } },
+        .{ .op = .{ .clip = .{ .bottom = .{ .y = .{ .base = .baseline } } } } },
+        .{ .op = .{ .stroke_vert = .{ .left = .{ .base = .uppercase_left } } } },
+        .{ .op = .{ .stroke_vert = .{ .right = .{ .base = .uppercase_right } } } },
         .{ .op = .{ .stroke_diag = .{ .left = .{ .base = .uppercase_left }, .top = .{ .base = .uppercase_top }, .right = .{ .base = .uppercase_right }, .bottom = .{ .base = .baseline }, .slope_ltr = .descend, .left_attach = .y, .right_attach = .y } } },
     };
     pub const Z = [_]Op{
-        .{ .op = .{ .stroke_horz = .{ .y = .{ .top = .{ .base = .uppercase_top } }, .left = .{ .base = .uppercase_left }, .right = .{ .base = .uppercase_right } } } },
-        .{ .op = .{ .stroke_horz = .{ .y = .{ .bottom = .{ .base = .baseline } }, .left = .{ .base = .uppercase_left }, .right = .{ .base = .uppercase_right } } } },
+        .{ .op = .{ .clip = .{ .left = .{ .x = .{ .base = .uppercase_left } } } } },
+        .{ .op = .{ .clip = .{ .right = .{ .x = .{ .base = .uppercase_right } } } } },
+        .{ .op = .{ .clip = .{ .top = .{ .y = .{ .base = .uppercase_top } } } } },
+        .{ .op = .{ .clip = .{ .bottom = .{ .y = .{ .base = .baseline } } } } },
+        .{ .op = .{ .stroke_horz = .{ .top = .{ .base = .uppercase_top } } } },
+        .{ .op = .{ .stroke_horz = .{ .bottom = .{ .base = .baseline } } } },
         .{ .op = .{ .stroke_diag = .{ .left = .{ .base = .uppercase_left }, .top = .{ .base = .uppercase_top, .offset = .@"1" }, .right = .{ .base = .uppercase_right }, .bottom = .{ .base = .baseline, .offset = .@"-1" }, .slope_ltr = .ascend, .left_attach = .y, .right_attach = .y } } },
     };
 };

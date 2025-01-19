@@ -77,17 +77,29 @@ fn getOps(grapheme_utf8: []const u8) []const glyphs.Op {
 // TODO: have a version of this that instead of ops, takes bytes: []const u8 and
 //       decodes the bytes into ops as it goes and runs this function
 fn pixelShaderOps(w: u16, h: u16, col: u16, row: u16, ops: []const glyphs.Op) u8 {
-    var intensity: u8 = 0;
+    var max: u8 = 0;
+    var clip_count: u8 = 0;
     for (ops) |*op| {
-        intensity = @max(intensity, pixelShaderOp(w, h, col, row, op));
-        if (intensity >= 255) break;
+        if (clip_count > 0) {
+            clip_count -= 1;
+            continue;
+        }
+        max = @max(max, switch (pixelShaderOp(w, h, col, row, op)) {
+            .max_candidate => |candidate| candidate,
+            .clip => |count| {
+                if (count == 0) return max;
+                clip_count = count;
+                continue;
+            },
+        });
+        if (max == 255) break;
     }
-    return intensity;
+    return max;
 }
-fn pixelShaderOp(w: u16, h: u16, col: u16, row: u16, op: *const glyphs.Op) u8 {
+fn pixelShaderOp(w: u16, h: u16, col: u16, row: u16, op: *const glyphs.Op) ShaderResult {
     switch (op.condition) {
         .yes => {},
-        ._1_has_bottom_bar => return 0, // disable for now
+        ._1_has_bottom_bar => return .{ .max_candidate = 0 }, // disable for now
     }
     return switch (op.op) {
         inline else => |*args, tag| @field(shaders, @tagName(tag))(
@@ -117,21 +129,6 @@ fn getStrokeWidth(w: u16) u16 {
     //if (true) return 1;
     return @max(1, @as(u16, @intFromFloat(@round(@as(f32, @floatFromInt(w)) / 5))));
 }
-
-// const old_shaders = struct {
-//     fn stroke_diag(w: u16, h: u16, col: u16, row: u16, diag: Diag) u8 {
-//         return shaderDiagPx(
-//             col,
-//             row,
-//             getStrokeWidth(w),
-//             diag.x0.toPx(w),
-//             diag.y0.toPx(h),
-//             diag.x1.toPx(w),
-//             diag.y1.toPx(h),
-//             .sharp_corner,
-//         );
-//     }
-// };
 
 const Extent = struct {
     low: u16,
@@ -189,30 +186,40 @@ const Extent = struct {
     }
 };
 
+const ShaderResult = union(enum) {
+    // a new maximum value candidate for the pixel
+    max_candidate: u8,
+    clip: u8,
+};
+
 const shaders = struct {
-    fn stroke_vert(w: u16, h: u16, col: u16, row: u16, s: *const glyphs.StrokeVert) u8 {
-        const extent_x = Extent.initStrokeX(w, s.x);
-        return shaderRectCoords(
-            col,
-            row,
-            extent_x.low,
-            roundedCoordFromY(w, h, s.top),
-            extent_x.high,
-            roundedCoordFromY(w, h, s.bottom),
-        );
+    fn clip(w: u16, h: u16, col: u16, row: u16, clip_union: *const glyphs.Clip) ShaderResult {
+        switch (clip_union.*) {
+            .left, .right => |c| {
+                const coord = roundedCoordFromX(w, c.x);
+                const clipped = if (clip_union.* == .left) (col < coord) else (col >= coord);
+                return if (clipped) .{ .clip = c.count } else .{ .max_candidate = 0 };
+            },
+            .top, .bottom => |c| {
+                const coord = roundedCoordFromY(w, h, c.y);
+                const clipped = if (clip_union.* == .top) (row < coord) else (row >= coord);
+                return if (clipped) .{ .clip = c.count } else .{ .max_candidate = 0 };
+            },
+        }
     }
-    fn stroke_horz(w: u16, h: u16, col: u16, row: u16, s: *const glyphs.StrokeHorz) u8 {
-        const extent_y = Extent.initStrokeY(w, h, s.y);
-        return shaderRectCoords(
-            col,
-            row,
-            roundedCoordFromX(w, s.left),
-            extent_y.low,
-            roundedCoordFromX(w, s.right),
-            extent_y.high,
-        );
+
+    fn stroke_vert(w: u16, h: u16, col: u16, row: u16, x: *const glyphs.StrokeX) ShaderResult {
+        _ = h;
+        _ = row;
+        const extent_x = Extent.initStrokeX(w, x.*);
+        return .{ .max_candidate = if (col < extent_x.low or col >= extent_x.high) 0 else 255 };
     }
-    fn stroke_diag(w: u16, h: u16, col: u16, row: u16, s: *const glyphs.StrokeDiag) u8 {
+    fn stroke_horz(w: u16, h: u16, col: u16, row: u16, y: *const glyphs.StrokeY) ShaderResult {
+        _ = col;
+        const extent_y = Extent.initStrokeY(w, h, y.*);
+        return .{ .max_candidate = if (row < extent_y.low or row >= extent_y.high) 0 else 255 };
+    }
+    fn stroke_diag(w: u16, h: u16, col: u16, row: u16, s: *const glyphs.StrokeDiag) ShaderResult {
         return shaderDiagCoords(
             col,
             row,
@@ -230,7 +237,7 @@ const shaders = struct {
             @as(f32, @floatFromInt(getStrokeWidth(w))) / 2.0,
         );
     }
-    fn stroke_dot(w: u16, h: u16, col: u16, row: u16, s: *const glyphs.StrokePoint) u8 {
+    fn stroke_dot(w: u16, h: u16, col: u16, row: u16, s: *const glyphs.StrokePoint) ShaderResult {
         const stroke_width = getStrokeWidth(w);
         const extent_x = Extent.initStrokeX(w, s.x);
         const extent_y = Extent.initStrokeY(w, h, s.y);
@@ -249,13 +256,13 @@ const shaders = struct {
             stroke_width,
         );
     }
-    fn todo(w: u16, h: u16, col: u16, row: u16, args: *const void) u8 {
+    fn todo(w: u16, h: u16, col: u16, row: u16, args: *const void) ShaderResult {
         _ = w;
         _ = h;
         _ = col;
         _ = row;
         _ = args;
-        return 200;
+        return .{ .max_candidate = 200 };
         // const pos = normalizePos(w, h, col, row);
         // const border_width = 0.1;
 
@@ -265,10 +272,10 @@ const shaders = struct {
     }
 };
 
-fn shaderRectCoords(col: u16, row: u16, l: u16, t: u16, r: u16, b: u16) u8 {
-    return if (col < l or col >= r or row < t or row >= b) 0 else 255;
+fn shaderRectCoords(col: u16, row: u16, l: u16, t: u16, r: u16, b: u16) ShaderResult {
+    return .{ .max_candidate = if (col < l or col >= r or row < t or row >= b) 0 else 255 };
 }
-fn shaderCircleCoords(col: u16, row: u16, x: f32, y: f32, diameter: u16) u8 {
+fn shaderCircleCoords(col: u16, row: u16, x: f32, y: f32, diameter: u16) ShaderResult {
     const radius: f32 = @as(f32, @floatFromInt(diameter)) / 2.0;
     const px: f32 = @as(f32, @floatFromInt(col)) + 0.5; // Center of pixel
     const py: f32 = @as(f32, @floatFromInt(row)) + 0.5;
@@ -286,12 +293,12 @@ fn shaderDiagCoords(
     left_attach: glyphs.Dimension,
     right_attach: glyphs.Dimension,
     half_stroke_width: f32,
-) u8 {
+) ShaderResult {
     std.debug.assert(extent_x.low <= extent_x.high);
     std.debug.assert(extent_y.low <= extent_y.high);
 
-    if (!extent_x.contains(col)) return 0;
-    if (!extent_y.contains(row)) return 0;
+    if (!extent_x.contains(col)) return .{ .max_candidate = 0 };
+    if (!extent_y.contains(row)) return .{ .max_candidate = 0 };
 
     const pixel_center: Coord(f32) = .{
         .x = @as(f32, @floatFromInt(col)) + 0.5,
@@ -330,13 +337,13 @@ fn shaderDiagCoords(
     return antialias(thickness, distance);
 }
 
-fn antialias(boundary: f32, position: f32) u8 {
-    if (position <= boundary - 0.7071) return 255; // sqrt(2)/2 ≈ 0.7071 for pixel coverage
-    if (position >= boundary + 0.7071) return 0;
+fn antialias(boundary: f32, position: f32) ShaderResult {
+    if (position <= boundary - 0.7071) return .{ .max_candidate = 255 }; // sqrt(2)/2 ≈ 0.7071 for pixel coverage
+    if (position >= boundary + 0.7071) return .{ .max_candidate = 0 };
 
     // Pixel is on the edge - calculate coverage
     const coverage = (boundary + 0.7071 - position) / (2 * 0.7071);
-    return @intFromFloat(coverage * 255.0);
+    return .{ .max_candidate = @intFromFloat(coverage * 255.0) };
 }
 
 fn Coord(comptime T: type) type {

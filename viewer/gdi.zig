@@ -71,7 +71,7 @@ pub fn paint(
         .{ .x = 7, .y = 20 },
         .{ .x = 8, .y = 20 },
         .{ .x = 9, .y = 20 },
-        .{ .x = 10, .y = 26 },
+        .{ .x = 10, .y = 20 },
         .{ .x = 11, .y = 26 },
         .{ .x = 20, .y = 25 },
         .{ .x = 21, .y = 25 },
@@ -92,17 +92,6 @@ pub fn paint(
         for (graphemes) |grapheme| {
             drawGrapheme(hdc, cache, .{ .x = x, .y = y }, size, grapheme);
             x += @as(i32, @intCast(size.x)) + spacing.x;
-            // const mem_dc = win32.CreateCompatibleDC(hdc);
-            // defer deleteDc(mem_dc);
-
-            // const bitmap = win32.CreateCompatibleBitmap(hdc, size.x, size.y);
-            // defer deleteObject(bitmap);
-
-            // const old_bmp = win32.SelectObject(mem_dc, bitmap);
-            // defer _ = win32.SelectObject(mem_dc, @ptrCast(old_bmp));
-
-            //const bmp = win32.CreateCompatible
-            //_ = win32.
         }
         y += size.y + spacing.y;
     }
