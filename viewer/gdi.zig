@@ -15,8 +15,15 @@ const theme = struct {
     const fg: Rgb8 = .{ .r = 255, .g = 255, .b = 255 };
 };
 
+const Bitmap = struct {
+    size: XY(u16),
+    section: win32.HBITMAP,
+    grayscale: [*]u8,
+};
+
 pub const ObjectCache = struct {
     brush_bg: ?win32.HBRUSH = null,
+    bmp: ?Bitmap = null,
     fn getBrushRef(self: *ObjectCache, brush: Brush) *?win32.HBRUSH {
         return switch (brush) {
             .bg => &self.brush_bg,
@@ -34,6 +41,61 @@ pub const ObjectCache = struct {
             );
         }
         return brush_ref.*.?;
+    }
+    pub fn getBitmap(self: *ObjectCache, hdc: win32.HDC, size: XY(u16)) Bitmap {
+        if (self.bmp) |cached| {
+            if (cached.size.x >= size.x and cached.size.y >= size.y)
+                return cached;
+            deleteObject(cached.section);
+            self.bmp = null;
+        }
+
+        const BmpInfo = extern struct {
+            header: win32.BITMAPINFOHEADER,
+            colors: [256]win32.RGBQUAD,
+        };
+        var bmi: BmpInfo = .{
+            .header = .{
+                .biSize = @sizeOf(win32.BITMAPINFOHEADER),
+                .biWidth = @intCast(size.x),
+                .biHeight = -@as(i32, @intCast(size.y)), // Negative for top-down
+                .biPlanes = 1,
+                .biBitCount = 8,
+                .biCompression = win32.BI_RGB,
+                .biSizeImage = 0,
+                .biXPelsPerMeter = 0,
+                .biYPelsPerMeter = 0,
+                .biClrUsed = 0,
+                .biClrImportant = 0,
+            },
+            .colors = undefined,
+        };
+        for (&bmi.colors, 0..) |*color, i| {
+            color.* = .{
+                .rgbBlue = @intCast(i),
+                .rgbGreen = @intCast(i),
+                .rgbRed = @intCast(i),
+                .rgbReserved = undefined,
+            };
+        }
+
+        var maybe_bits: ?*anyopaque = undefined;
+        const bmp_section = win32.CreateDIBSection(
+            hdc,
+            @ptrCast(&bmi),
+            win32.DIB_RGB_COLORS,
+            &maybe_bits,
+            null,
+            0,
+        ) orelse win32.panicWin32("CreateDIBSection", win32.GetLastError());
+        errdefer deleteObject(bmp_section);
+
+        self.bmp = .{
+            .size = size,
+            .section = bmp_section,
+            .grayscale = @ptrCast(maybe_bits orelse @panic("possible?")),
+        };
+        return self.bmp.?;
     }
 };
 
@@ -73,6 +135,22 @@ pub fn paint(
         .{ .x = 100, .y = 260 },
         .{ .x = 100, .y = 100 },
     };
+    const max_size = blk: {
+        var max: XY(u16) = .{ .x = 0, .y = 0 };
+        for (sizes) |size| {
+            max.x = @max(max.x, size.x);
+            max.y = @max(max.y, size.y);
+        }
+        break :blk max;
+    };
+    const bmp = cache.getBitmap(hdc, max_size);
+    const bmp_stride = (bmp.size.x + 3) & ~@as(u32, 3);
+
+    const mem_hdc = win32.CreateCompatibleDC(hdc);
+    defer deleteDc(mem_hdc);
+
+    const old_bmp = win32.SelectObject(mem_hdc, @ptrCast(bmp.section));
+    defer _ = win32.SelectObject(mem_hdc, old_bmp);
 
     const margin = win32.scaleDpi(i32, 10, dpi);
     const spacing: XY(i32) = .{
@@ -86,7 +164,37 @@ pub fn paint(
     for (sizes) |size| {
         var x: i32 = margin;
         for (graphemes) |grapheme| {
-            drawGrapheme(hdc, cache, .{ .x = x, .y = y }, size, font_weight, grapheme);
+            const config: codefont.Config = .{
+                ._1_has_bottom_bar = true,
+            };
+            const stroke_width = blk: {
+                // good for testing
+                //if (true) break :blk 1;
+                break :blk codefont.calcStrokeWidth(u16, size.x, font_weight);
+            };
+            codefont.render(
+                &config,
+                u16,
+                size.x,
+                size.y,
+                stroke_width,
+                bmp.grayscale,
+                bmp_stride,
+                grapheme,
+                .{ .output_precleared = false },
+            );
+            if (0 == win32.BitBlt(
+                hdc,
+                x,
+                y,
+                size.x,
+                size.y,
+                mem_hdc,
+                0,
+                0,
+                win32.SRCCOPY,
+            )) win32.panicWin32("BitGlt", win32.GetLastError());
+
             x += @as(i32, @intCast(size.x));
             fillRect(hdc, .{ .left = x, .top = y, .right = x + spacing.x, .bottom = y + size.y }, bg_brush);
             x += spacing.x;
@@ -97,96 +205,6 @@ pub fn paint(
         y += spacing.y;
     }
     fillRect(hdc, .{ .left = 0, .top = y, .right = client_size.x, .bottom = client_size.y }, bg_brush);
-}
-
-fn drawGrapheme(
-    hdc: win32.HDC,
-    cache: *ObjectCache,
-    pos: XY(i32),
-    size: XY(u16),
-    weight: f32,
-    grapheme: []const u8,
-) void {
-    _ = cache;
-
-    const BmpInfo = extern struct {
-        header: win32.BITMAPINFOHEADER,
-        colors: [256]win32.RGBQUAD,
-    };
-    var bmi: BmpInfo = .{
-        .header = .{
-            .biSize = @sizeOf(win32.BITMAPINFOHEADER),
-            .biWidth = @intCast(size.x),
-            .biHeight = -@as(i32, @intCast(size.y)), // Negative for top-down
-            .biPlanes = 1,
-            .biBitCount = 8,
-            .biCompression = win32.BI_RGB,
-            .biSizeImage = 0,
-            .biXPelsPerMeter = 0,
-            .biYPelsPerMeter = 0,
-            .biClrUsed = 0,
-            .biClrImportant = 0,
-        },
-        .colors = undefined,
-    };
-    for (&bmi.colors, 0..) |*color, i| {
-        color.* = .{
-            .rgbBlue = @intCast(i),
-            .rgbGreen = @intCast(i),
-            .rgbRed = @intCast(i),
-            .rgbReserved = undefined,
-        };
-    }
-
-    // Create DIB Section
-    var maybe_bits: ?*anyopaque = undefined;
-    const bmp_section = win32.CreateDIBSection(
-        hdc,
-        @ptrCast(&bmi),
-        win32.DIB_RGB_COLORS,
-        &maybe_bits,
-        null,
-        0,
-    ) orelse win32.panicWin32("CreateDIBSection", win32.GetLastError());
-    defer deleteObject(bmp_section);
-
-    const stride = (size.x + 3) & ~@as(u32, 3);
-    const config: codefont.Config = .{
-        ._1_has_bottom_bar = true,
-    };
-    codefont.render(
-        &config,
-        u16,
-        size.x,
-        size.y,
-        // good for testing
-        //1,
-        codefont.calcStrokeWidth(u16, size.x, weight),
-        @ptrCast(maybe_bits orelse @panic("possible?")),
-        stride,
-        grapheme,
-        // the bitmap is pre-zeroed for us since we just created it
-        .{ .output_precleared = true },
-    );
-
-    const mem_dc = win32.CreateCompatibleDC(hdc);
-    defer deleteDc(mem_dc);
-
-    const old_bmp = win32.SelectObject(mem_dc, @ptrCast(bmp_section));
-    defer _ = win32.SelectObject(mem_dc, old_bmp);
-
-    // Copy to screen
-    if (0 == win32.BitBlt(
-        hdc,
-        pos.x,
-        pos.y,
-        size.x,
-        size.y,
-        mem_dc,
-        0,
-        0,
-        win32.SRCCOPY,
-    )) win32.panicWin32("BitGlt", win32.GetLastError());
 }
 
 fn fillRect(hdc: win32.HDC, rect: win32.RECT, brush: win32.HBRUSH) void {
