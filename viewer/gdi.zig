@@ -51,14 +51,7 @@ pub fn paint(
     // NOTE: clearing the entire window first causes flickering
     //       see https://catch22.net/tuts/win32/flicker-free-drawing/
     //       TLDR; don't draw over the same pixel twice
-    fillRect(hdc, .{
-        .left = 0,
-        .top = 0,
-        .right = client_size.x,
-        .bottom = client_size.y,
-    }, cache.getBrush(.bg));
-    _ = win32.SetBkColor(hdc, colorrefFromRgb(theme.bg));
-    _ = win32.SetTextColor(hdc, colorrefFromRgb(theme.fg));
+    const bg_brush = cache.getBrush(.bg);
 
     const graphemes = [_][]const u8{ "H", "i", "1", "N", "Z", "O" };
 
@@ -88,14 +81,22 @@ pub fn paint(
     };
     var y: i32 = margin;
 
+    fillRect(hdc, .{ .left = 0, .top = 0, .right = client_size.x, .bottom = y }, bg_brush);
+    fillRect(hdc, .{ .left = 0, .top = margin, .right = margin, .bottom = client_size.y }, bg_brush);
     for (sizes) |size| {
         var x: i32 = margin;
         for (graphemes) |grapheme| {
             drawGrapheme(hdc, cache, .{ .x = x, .y = y }, size, font_weight, grapheme);
-            x += @as(i32, @intCast(size.x)) + spacing.x;
+            x += @as(i32, @intCast(size.x));
+            fillRect(hdc, .{ .left = x, .top = y, .right = x + spacing.x, .bottom = y + size.y }, bg_brush);
+            x += spacing.x;
         }
-        y += size.y + spacing.y;
+        fillRect(hdc, .{ .left = x, .top = y, .right = client_size.x, .bottom = y + size.y }, bg_brush);
+        y += size.y;
+        fillRect(hdc, .{ .left = margin, .top = y, .right = client_size.x, .bottom = y + spacing.y }, bg_brush);
+        y += spacing.y;
     }
+    fillRect(hdc, .{ .left = 0, .top = y, .right = client_size.x, .bottom = client_size.y }, bg_brush);
 }
 
 fn drawGrapheme(
