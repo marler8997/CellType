@@ -45,6 +45,7 @@ pub fn paint(
     hdc: win32.HDC,
     dpi: u32,
     client_size: XY(i32),
+    font_weight: f32,
     cache: *ObjectCache,
 ) void {
     // NOTE: clearing the entire window first causes flickering
@@ -90,7 +91,7 @@ pub fn paint(
     for (sizes) |size| {
         var x: i32 = margin;
         for (graphemes) |grapheme| {
-            drawGrapheme(hdc, cache, .{ .x = x, .y = y }, size, grapheme);
+            drawGrapheme(hdc, cache, .{ .x = x, .y = y }, size, font_weight, grapheme);
             x += @as(i32, @intCast(size.x)) + spacing.x;
         }
         y += size.y + spacing.y;
@@ -102,6 +103,7 @@ fn drawGrapheme(
     cache: *ObjectCache,
     pos: XY(i32),
     size: XY(u16),
+    weight: f32,
     grapheme: []const u8,
 ) void {
     _ = cache;
@@ -148,7 +150,6 @@ fn drawGrapheme(
     defer deleteObject(bmp_section);
 
     const stride = (size.x + 3) & ~@as(u32, 3);
-
     const config: codefont.Config = .{
         ._1_has_bottom_bar = true,
     };
@@ -157,6 +158,9 @@ fn drawGrapheme(
         u16,
         size.x,
         size.y,
+        // good for testing
+        //1,
+        codefont.calcStrokeWidth(u16, size.x, weight),
         @ptrCast(maybe_bits orelse @panic("possible?")),
         stride,
         grapheme,

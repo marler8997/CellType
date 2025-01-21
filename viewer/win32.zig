@@ -6,6 +6,8 @@ const win32 = @import("win32").everything;
 const gdi = @import("gdi.zig");
 const XY = @import("xy.zig").XY;
 
+const codefont = @import("codefont");
+
 const window_style_ex = win32.WINDOW_EX_STYLE{};
 const window_style = win32.WS_OVERLAPPEDWINDOW;
 
@@ -13,6 +15,7 @@ const global = struct {
     var hwnd: win32.HWND = undefined;
     var arena_instance = std.heap.ArenaAllocator.init(std.heap.page_allocator);
     var gdi_cache: gdi.ObjectCache = .{};
+    var font_weight: f32 = codefont.default_weight;
 };
 
 pub export fn wWinMain(
@@ -137,6 +140,19 @@ fn WndProc(
     lparam: win32.LPARAM,
 ) callconv(std.os.windows.WINAPI) win32.LRESULT {
     switch (uMsg) {
+        win32.WM_KEYDOWN => {
+            {
+                const new_weight = @max(0.01, switch (wparam) {
+                    @intFromEnum(win32.VK_DOWN) => global.font_weight - 0.01,
+                    @intFromEnum(win32.VK_UP) => global.font_weight + 0.01,
+                    else => global.font_weight,
+                });
+                if (new_weight != global.font_weight) {
+                    global.font_weight = new_weight;
+                    win32.invalidateHwnd(hwnd);
+                }
+            }
+        },
         win32.WM_CLOSE, win32.WM_DESTROY => {
             win32.PostQuitMessage(0);
             return 0;
@@ -146,7 +162,7 @@ fn WndProc(
             const client_size = getClientSize(hwnd);
             var ps: win32.PAINTSTRUCT = undefined;
             const hdc = win32.BeginPaint(hwnd, &ps) orelse win32.panicWin32("BeginPaint", win32.GetLastError());
-            gdi.paint(hdc, dpi, client_size, &global.gdi_cache);
+            gdi.paint(hdc, dpi, client_size, global.font_weight, &global.gdi_cache);
             _ = win32.EndPaint(hwnd, &ps);
             return 0;
         },
