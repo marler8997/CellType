@@ -3,6 +3,7 @@
 const std = @import("std");
 const CodefontRenderer = @This();
 
+const curve = @import("curve.zig");
 const glyphs = @import("glyphs.zig");
 
 // Notes:
@@ -256,6 +257,25 @@ const shaders = struct {
             stroke_width,
         );
     }
+    fn stroke_curve(w: u16, h: u16, col: u16, row: u16, s: *const glyphs.StrokeCurve) ShaderResult {
+        return shaderCurveCoords(
+            col,
+            row,
+            .{
+                .x = coordFromX(w, s.start.x),
+                .y = coordFromY(w, h, s.start.y),
+            },
+            .{
+                .x = coordFromX(w, s.control.x),
+                .y = coordFromY(w, h, s.control.y),
+            },
+            .{
+                .x = coordFromX(w, s.end.x),
+                .y = coordFromY(w, h, s.end.y),
+            },
+            @as(f32, @floatFromInt(getStrokeWidth(w))) / 2.0,
+        );
+    }
     fn todo(w: u16, h: u16, col: u16, row: u16, args: *const void) ShaderResult {
         _ = w;
         _ = h;
@@ -336,6 +356,31 @@ fn shaderDiagCoords(
     const thickness = half_stroke_width;
     return antialias(thickness, distance);
 }
+fn shaderCurveCoords(
+    col: u16,
+    row: u16,
+    start: Coord(f32),
+    control: Coord(f32),
+    end: Coord(f32),
+    half_stroke_width: f32,
+) ShaderResult {
+    const pixel = Coord(f32){
+        .x = @as(f32, @floatFromInt(col)) + 0.5,
+        .y = @as(f32, @floatFromInt(row)) + 0.5,
+    };
+
+    // Find t value that gives point on curve closest to pixel
+    // This requires solving a cubic equation
+    const t = @import("curve.zig").findClosestPointOnQuadraticBezier(pixel, start, control, end);
+
+    // Get point on curve at t
+    const curve_point = curve.evaluateQuadraticBezier(t, start, control, end);
+
+    // Calculate distance from pixel to curve point
+    const distance = calcDist(pixel.x, pixel.y, curve_point.x, curve_point.y);
+
+    return antialias(half_stroke_width, distance);
+}
 
 fn antialias(boundary: f32, position: f32) ShaderResult {
     if (position <= boundary - 0.7071) return .{ .max_candidate = 255 }; // sqrt(2)/2 ≈ 0.7071 for pixel coverage
@@ -346,7 +391,7 @@ fn antialias(boundary: f32, position: f32) ShaderResult {
     return .{ .max_candidate = @intFromFloat(coverage * 255.0) };
 }
 
-fn Coord(comptime T: type) type {
+pub fn Coord(comptime T: type) type {
     return struct {
         x: T,
         y: T,
@@ -375,7 +420,7 @@ pub fn pointToLineDistance(p: Coord(f32), p1: Coord(f32), p2: Coord(f32)) f32 {
 fn square(comptime T: type, x: T) T {
     return x * x;
 }
-fn calcDist(x0: f32, y0: f32, x1: f32, y1: f32) f32 {
+pub fn calcDist(x0: f32, y0: f32, x1: f32, y1: f32) f32 {
     return @sqrt(square(f32, x1 - x0) + square(f32, y1 - y0));
 }
 
@@ -414,13 +459,16 @@ fn coordFromY(w: u16, h: u16, y: glyphs.Y) f32 {
 fn coordFromBaseY(h: u16, y: glyphs.BaseY) f32 {
     // if y is large enough, we just always use the same floating point
     // multiplier for the position
+    const uppercase_top = 0.065;
+    const baseline = 0.8;
     const large_enough_value: f32 = switch (y) {
-        .uppercase_top => 0.065,
+        .uppercase_top => uppercase_top,
         .lowercase_dot_bottom => 0.199,
         ._1_slanty_bottom => 0.266,
         .lowercase_top => 0.280,
+        .uppercase_center => uppercase_top + (baseline - uppercase_top) / 2.0,
         .uppercase_midline_center => 0.418,
-        .baseline => 0.8,
+        .baseline => baseline,
     };
     return large_enough_value * @as(f32, @floatFromInt(h));
 }

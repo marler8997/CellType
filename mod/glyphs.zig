@@ -11,6 +11,7 @@ pub const BaseY = enum {
     lowercase_dot_bottom,
     _1_slanty_bottom,
     lowercase_top,
+    uppercase_center,
     uppercase_midline_center,
     baseline,
 };
@@ -52,6 +53,9 @@ pub const ClipX = struct {
 };
 pub const ClipY = struct { y: Y, count: u8 = 0 };
 
+// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+// TODO: I *think I can get rid of StrokeX/StrokeY and just use the offset
+//       in X/Y instead. Also offset should be an f32 between -1 and 1
 pub const StrokeX = union(enum) {
     left: X,
     center: X,
@@ -95,6 +99,17 @@ pub const StrokeDiag = struct {
     right_attach: Dimension,
 };
 
+const Point = struct {
+    x: X,
+    y: Y,
+};
+
+pub const StrokeCurve = struct {
+    start: Point,
+    control: Point,
+    end: Point,
+};
+
 pub const Condition = enum {
     yes,
     _1_has_bottom_bar,
@@ -109,6 +124,7 @@ pub const Op = struct {
         stroke_horz: StrokeY,
         stroke_diag: StrokeDiag,
         stroke_dot: StrokePoint,
+        stroke_curve: StrokeCurve,
     },
 };
 
@@ -156,5 +172,35 @@ pub const c = struct {
         .{ .op = .{ .stroke_horz = .{ .top = .{ .base = .uppercase_top } } } },
         .{ .op = .{ .stroke_horz = .{ .bottom = .{ .base = .baseline } } } },
         .{ .op = .{ .stroke_diag = .{ .left = .{ .base = .uppercase_left }, .top = .{ .base = .uppercase_top, .offset = .@"1" }, .right = .{ .base = .uppercase_right }, .bottom = .{ .base = .baseline, .offset = .@"-1" }, .slope_ltr = .ascend, .left_attach = .y, .right_attach = .y } } },
+    };
+    pub const O = [_]Op{
+        .{ .op = .{
+            .stroke_curve = .{
+                .start = .{ .x = .{ .base = .uppercase_left }, .y = .{ .base = .uppercase_center } },
+                .control = .{ .x = .{ .base = .uppercase_left }, .y = .{ .base = .uppercase_top, .offset = .@"0.5" } },
+                .end = .{ .x = .{ .base = .center }, .y = .{ .base = .uppercase_top, .offset = .@"0.5" } },
+            },
+        } },
+        .{ .op = .{
+            .stroke_curve = .{
+                .start = .{ .x = .{ .base = .uppercase_right }, .y = .{ .base = .uppercase_center } },
+                .control = .{ .x = .{ .base = .uppercase_right }, .y = .{ .base = .uppercase_top, .offset = .@"0.5" } },
+                .end = .{ .x = .{ .base = .center }, .y = .{ .base = .uppercase_top, .offset = .@"0.5" } },
+            },
+        } },
+        .{ .op = .{
+            .stroke_curve = .{
+                .start = .{ .x = .{ .base = .uppercase_left }, .y = .{ .base = .uppercase_center } },
+                .control = .{ .x = .{ .base = .uppercase_left }, .y = .{ .base = .baseline } },
+                .end = .{ .x = .{ .base = .center }, .y = .{ .base = .baseline } },
+            },
+        } },
+        .{ .op = .{
+            .stroke_curve = .{
+                .start = .{ .x = .{ .base = .uppercase_right }, .y = .{ .base = .uppercase_center } },
+                .control = .{ .x = .{ .base = .uppercase_right }, .y = .{ .base = .baseline } },
+                .end = .{ .x = .{ .base = .center }, .y = .{ .base = .baseline } },
+            },
+        } },
     };
 };

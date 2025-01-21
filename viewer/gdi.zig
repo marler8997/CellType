@@ -59,7 +59,7 @@ pub fn paint(
     _ = win32.SetBkColor(hdc, colorrefFromRgb(theme.bg));
     _ = win32.SetTextColor(hdc, colorrefFromRgb(theme.fg));
 
-    const graphemes = [_][]const u8{ "H", "i", "1", "N", "Z" };
+    const graphemes = [_][]const u8{ "H", "i", "1", "N", "Z", "O" };
 
     const sizes = [_]XY(u16){
         .{ .x = 1, .y = 12 },
