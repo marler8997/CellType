@@ -21,7 +21,7 @@ pub fn build(b: *std.Build) void {
 
         switch (target.result.os.tag) {
             .windows => if (b.lazyDependency("win32", .{})) |win32_dep| {
-                exe.root_module.addImport("win32", win32_dep.module("zigwin32"));
+                exe.root_module.addImport("win32", win32_dep.module("win32"));
             },
             else => {},
         }

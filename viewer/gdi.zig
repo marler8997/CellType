@@ -28,7 +28,7 @@ pub const ObjectCache = struct {
             const rgb = switch (brush) {
                 .bg => theme.bg,
             };
-            brush_ref.* = win32.CreateSolidBrush(colorrefFromRgb(rgb)) orelse fatalWin32(
+            brush_ref.* = win32.CreateSolidBrush(colorrefFromRgb(rgb)) orelse win32.panicWin32(
                 "CreateSolidBrush",
                 win32.GetLastError(),
             );
@@ -144,7 +144,7 @@ fn drawGrapheme(
         &maybe_bits,
         null,
         0,
-    ) orelse fatalWin32("CreateDIBSection", win32.GetLastError());
+    ) orelse win32.panicWin32("CreateDIBSection", win32.GetLastError());
     defer deleteObject(bmp_section);
 
     const stride = (size.x + 3) & ~@as(u32, 3);
@@ -177,23 +177,19 @@ fn drawGrapheme(
         0,
         0,
         win32.SRCCOPY,
-    )) fatalWin32("BitGlt", win32.GetLastError());
+    )) win32.panicWin32("BitGlt", win32.GetLastError());
 }
 
 fn fillRect(hdc: win32.HDC, rect: win32.RECT, brush: win32.HBRUSH) void {
-    if (0 == win32.FillRect(hdc, &rect, brush)) fatalWin32(
+    if (0 == win32.FillRect(hdc, &rect, brush)) win32.panicWin32(
         "FillRect",
         win32.GetLastError(),
     );
 }
 
 pub fn deleteObject(obj: ?win32.HGDIOBJ) void {
-    if (0 == win32.DeleteObject(obj)) fatalWin32("DeleteObject", win32.GetLastError());
+    if (0 == win32.DeleteObject(obj)) win32.panicWin32("DeleteObject", win32.GetLastError());
 }
 pub fn deleteDc(obj: win32.HDC) void {
-    if (0 == win32.DeleteDC(obj)) fatalWin32("DeleteDC", win32.GetLastError());
-}
-
-pub fn fatalWin32(what: []const u8, err: win32.WIN32_ERROR) noreturn {
-    std.debug.panic("{s} failed with {}", .{ what, err.fmt() });
+    if (0 == win32.DeleteDC(obj)) win32.panicWin32("DeleteDC", win32.GetLastError());
 }

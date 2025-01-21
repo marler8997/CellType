@@ -53,7 +53,7 @@ fn winmain() !void {
             .lpszClassName = CLASS_NAME,
             .hIconSm = null,
         };
-        if (0 == win32.RegisterClassExW(&wc)) fatalWin32("RegisterClass", win32.GetLastError());
+        if (0 == win32.RegisterClassExW(&wc)) win32.panicWin32("RegisterClass", win32.GetLastError());
     }
 
     global.hwnd = win32.CreateWindowExW(
@@ -97,7 +97,7 @@ fn winmain() !void {
         while (true) {
             var msg: win32.MSG = undefined;
             const result = win32.GetMessageW(&msg, null, 0, 0);
-            if (result < 0) fatalWin32("GetMessage", win32.GetLastError());
+            if (result < 0) win32.panicWin32("GetMessage", win32.GetLastError());
             if (result == 0) break :blk msg.wParam;
             _ = win32.TranslateMessage(&msg);
             _ = win32.DispatchMessageW(&msg);
@@ -145,7 +145,7 @@ fn WndProc(
             const dpi = win32.dpiFromHwnd(hwnd);
             const client_size = getClientSize(hwnd);
             var ps: win32.PAINTSTRUCT = undefined;
-            const hdc = win32.BeginPaint(hwnd, &ps) orelse fatalWin32("BeginPaint", win32.GetLastError());
+            const hdc = win32.BeginPaint(hwnd, &ps) orelse win32.panicWin32("BeginPaint", win32.GetLastError());
             gdi.paint(hdc, dpi, client_size, &global.gdi_cache);
             _ = win32.EndPaint(hwnd, &ps);
             return 0;
@@ -163,7 +163,7 @@ fn WndProc(
 pub fn getClientSize(hwnd: win32.HWND) XY(i32) {
     var rect: win32.RECT = undefined;
     if (0 == win32.GetClientRect(hwnd, &rect))
-        fatalWin32("GetClientRect", win32.GetLastError());
+        win32.panicWin32("GetClientRect", win32.GetLastError());
     std.debug.assert(rect.left == 0);
     std.debug.assert(rect.top == 0);
     return .{ .x = rect.right, .y = rect.bottom };
@@ -171,9 +171,6 @@ pub fn getClientSize(hwnd: win32.HWND) XY(i32) {
 
 pub fn oom(e: error{OutOfMemory}) noreturn {
     @panic(@errorName(e));
-}
-pub fn fatalWin32(what: []const u8, err: win32.WIN32_ERROR) noreturn {
-    std.debug.panic("{s} failed with {}", .{ what, err.fmt() });
 }
 // pub fn fatal(comptime fmt: []const u8, args: anytype) noreturn {
 //     std.log.err(fmt, args);
