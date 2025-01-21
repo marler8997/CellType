@@ -2,6 +2,7 @@ const std = @import("std");
 
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
+    const optimize = b.standardOptimizeOption(.{});
 
     const codefont_mod = b.addModule("codefont", .{
         .root_source_file = b.path("mod/codefont.zig"),
@@ -15,6 +16,7 @@ pub fn build(b: *std.Build) void {
                 else => b.path("viewer/posix.zig"),
             },
             .target = target,
+            .optimize = optimize,
             .win32_manifest = b.path("viewer/win32.manifest"),
         });
         exe.root_module.addImport("codefont", codefont_mod);
