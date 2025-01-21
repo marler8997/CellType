@@ -1,11 +1,11 @@
-pub const DesignBoundaryX = enum {
+pub const DesignBoundaryBaseX = enum {
     /// center of uppercase left stroke
     uppercase_left,
     center,
     /// center of uppercase right stroke
     uppercase_right,
 };
-pub const DesignBoundaryY = enum {
+pub const DesignBoundaryBaseY = enum {
     /// center of uppercase top
     uppercase_top,
     lowercase_dot,
@@ -40,53 +40,53 @@ pub const StrokeBalance = enum {
     balanced_away_from_center,
 };
 
-pub const AdjustableDesignBoundaryX = struct {
-    base: DesignBoundaryX,
+pub const DesignBoundaryX = struct {
+    base: DesignBoundaryBaseX,
     adjust: StrokeOffset = .@"0",
 };
-pub const AdjustableDesignBoundaryY = struct {
-    base: DesignBoundaryY,
+pub const DesignBoundaryY = struct {
+    base: DesignBoundaryBaseY,
     adjust: StrokeOffset = .@"0",
 };
 
 // Disables draw commands that follow based on a vertical or horizontal boundary.
 // Has no effect on draw commands that come before.
 pub const Clip = struct {
-    left: ?AdjustableDesignBoundaryX = null,
-    right: ?AdjustableDesignBoundaryX = null,
-    top: ?AdjustableDesignBoundaryY = null,
-    bottom: ?AdjustableDesignBoundaryY = null,
+    left: ?DesignBoundaryX = null,
+    right: ?DesignBoundaryX = null,
+    top: ?DesignBoundaryY = null,
+    bottom: ?DesignBoundaryY = null,
     // The number of draw commands that follow to apply the clip to. If count is
     // 0 then it applies to all the following draw operations.
     count: u8 = 0,
 };
 
 pub const StrokeVert = struct {
-    x: AdjustableDesignBoundaryX,
+    x: DesignBoundaryX,
     // TODO: we might want this at some point if we want strokes
     //       that grow differently based on the stroke size
     //balance: StrokeBalance,
 };
 pub const StrokeHorz = struct {
-    y: AdjustableDesignBoundaryY,
+    y: DesignBoundaryY,
     // TODO: we might want this at some point if we want strokes
     //       that grow differently based on the stroke size
     //balance: StrokeBalance,
 };
 
-pub const AdjustableDesignBoundaryPoint = struct {
-    x: AdjustableDesignBoundaryX,
-    y: AdjustableDesignBoundaryY,
+pub const DesignBoundaryPoint = struct {
+    x: DesignBoundaryX,
+    y: DesignBoundaryY,
 };
 
 pub const StrokeDiag = struct {
-    a: AdjustableDesignBoundaryPoint,
-    b: AdjustableDesignBoundaryPoint,
+    a: DesignBoundaryPoint,
+    b: DesignBoundaryPoint,
 };
 
 const Point = struct {
-    x: AdjustableDesignBoundaryX,
-    y: AdjustableDesignBoundaryY,
+    x: DesignBoundaryX,
+    y: DesignBoundaryY,
 };
 
 pub const StrokeCurve = struct {
@@ -108,7 +108,7 @@ pub const Op = struct {
         stroke_vert: StrokeVert,
         stroke_horz: StrokeHorz,
         stroke_diag: StrokeDiag,
-        stroke_dot: AdjustableDesignBoundaryPoint,
+        stroke_dot: DesignBoundaryPoint,
         stroke_curve: StrokeCurve,
     },
 };

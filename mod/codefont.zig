@@ -165,13 +165,13 @@ const Extent = struct {
         const low_f32: f32 = @floatFromInt(self.low);
         return low_f32 + (@as(f32, @floatFromInt(self.high)) - low_f32) / 2.0;
     }
-    pub fn initStrokeX(w: i32, stroke_width: i32, x: glyphs.AdjustableDesignBoundaryX) Extent {
-        const pixel_boundary = pixelBoundaryFromAdjustableDesignX(w, stroke_width, x);
+    pub fn initStrokeX(w: i32, stroke_width: i32, x: glyphs.DesignBoundaryX) Extent {
+        const pixel_boundary = pixelBoundaryFromDesignX(w, stroke_width, x);
         const high = pixel_boundary.adjust(stroke_width, .@"0.5").rounded;
         return .{ .low = high - stroke_width, .high = high };
     }
-    pub fn initStrokeY(h: i32, stroke_width: i32, y: glyphs.AdjustableDesignBoundaryY) Extent {
-        const pixel_boundary = pixelBoundaryFromAdjustableDesignY(h, stroke_width, y);
+    pub fn initStrokeY(h: i32, stroke_width: i32, y: glyphs.DesignBoundaryY) Extent {
+        const pixel_boundary = pixelBoundaryFromDesignY(h, stroke_width, y);
         const high = pixel_boundary.adjust(stroke_width, .@"0.5").rounded;
         return .{ .low = high - stroke_width, .high = high };
     }
@@ -188,22 +188,22 @@ const shaders = struct {
         var have_clip_boundary = false;
         if (args.left) |left| {
             have_clip_boundary = true;
-            const boundary = pixelBoundaryFromAdjustableDesignX(w, stroke_width, left);
+            const boundary = pixelBoundaryFromDesignX(w, stroke_width, left);
             if (col < boundary.rounded) return .{ .clip = args.count };
         }
         if (args.right) |right| {
             have_clip_boundary = true;
-            const boundary = pixelBoundaryFromAdjustableDesignX(w, stroke_width, right);
+            const boundary = pixelBoundaryFromDesignX(w, stroke_width, right);
             if (col >= boundary.rounded) return .{ .clip = args.count };
         }
         if (args.top) |top| {
             have_clip_boundary = true;
-            const boundary = pixelBoundaryFromAdjustableDesignY(h, stroke_width, top);
+            const boundary = pixelBoundaryFromDesignY(h, stroke_width, top);
             if (row < boundary.rounded) return .{ .clip = args.count };
         }
         if (args.bottom) |bottom| {
             have_clip_boundary = true;
-            const boundary = pixelBoundaryFromAdjustableDesignY(h, stroke_width, bottom);
+            const boundary = pixelBoundaryFromDesignY(h, stroke_width, bottom);
             if (row >= boundary.rounded) return .{ .clip = args.count };
         }
         if (!have_clip_boundary) @panic("got clip command with no boundaries");
@@ -228,18 +228,18 @@ const shaders = struct {
             .y = @floatFromInt(row),
         };
         const a: Coord(f32) = .{
-            .x = @floatFromInt(pixelBoundaryFromAdjustableDesignX(w, stroke_width, args.a.x).rounded),
-            .y = @floatFromInt(pixelBoundaryFromAdjustableDesignY(h, stroke_width, args.a.y).rounded),
+            .x = @floatFromInt(pixelBoundaryFromDesignX(w, stroke_width, args.a.x).rounded),
+            .y = @floatFromInt(pixelBoundaryFromDesignY(h, stroke_width, args.a.y).rounded),
         };
         const b: Coord(f32) = .{
-            .x = @floatFromInt(pixelBoundaryFromAdjustableDesignX(w, stroke_width, args.b.x).rounded),
-            .y = @floatFromInt(pixelBoundaryFromAdjustableDesignY(h, stroke_width, args.b.y).rounded),
+            .x = @floatFromInt(pixelBoundaryFromDesignX(w, stroke_width, args.b.x).rounded),
+            .y = @floatFromInt(pixelBoundaryFromDesignY(h, stroke_width, args.b.y).rounded),
         };
         const distance = pointToLineDistance(pixel, a, b);
         const half_stroke_width: f32 = @as(f32, @floatFromInt(stroke_width)) / 2.0;
         return antialias(half_stroke_width, distance);
     }
-    fn stroke_dot(w: i32, h: i32, stroke_width: i32, col: i32, row: i32, s: *const glyphs.AdjustableDesignBoundaryPoint) ShaderResult {
+    fn stroke_dot(w: i32, h: i32, stroke_width: i32, col: i32, row: i32, s: *const glyphs.DesignBoundaryPoint) ShaderResult {
         const extent_x = Extent.initStrokeX(w, stroke_width, s.x);
         const extent_y = Extent.initStrokeY(h, stroke_width, s.y);
         return if (stroke_width <= 2) shaderRectCoords(
@@ -262,16 +262,16 @@ const shaders = struct {
             col,
             row,
             .{
-                .x = @floatFromInt(pixelBoundaryFromAdjustableDesignX(w, stroke_width, s.start.x).rounded),
-                .y = @floatFromInt(pixelBoundaryFromAdjustableDesignY(h, stroke_width, s.start.y).rounded),
+                .x = @floatFromInt(pixelBoundaryFromDesignX(w, stroke_width, s.start.x).rounded),
+                .y = @floatFromInt(pixelBoundaryFromDesignY(h, stroke_width, s.start.y).rounded),
             },
             .{
-                .x = @floatFromInt(pixelBoundaryFromAdjustableDesignX(w, stroke_width, s.control.x).rounded),
-                .y = @floatFromInt(pixelBoundaryFromAdjustableDesignY(h, stroke_width, s.control.y).rounded),
+                .x = @floatFromInt(pixelBoundaryFromDesignX(w, stroke_width, s.control.x).rounded),
+                .y = @floatFromInt(pixelBoundaryFromDesignY(h, stroke_width, s.control.y).rounded),
             },
             .{
-                .x = @floatFromInt(pixelBoundaryFromAdjustableDesignX(w, stroke_width, s.end.x).rounded),
-                .y = @floatFromInt(pixelBoundaryFromAdjustableDesignY(h, stroke_width, s.end.y).rounded),
+                .x = @floatFromInt(pixelBoundaryFromDesignX(w, stroke_width, s.end.x).rounded),
+                .y = @floatFromInt(pixelBoundaryFromDesignY(h, stroke_width, s.end.y).rounded),
             },
             @as(f32, @floatFromInt(stroke_width)) / 2.0,
         );
@@ -453,27 +453,27 @@ test "adjusting boundaries" {
     }
 }
 
-fn pixelBoundaryFromAdjustableDesignX(w: i32, stroke_width: i32, x: glyphs.AdjustableDesignBoundaryX) PixelBoundary {
-    const boundary = pixelBoundaryFromDesignX(w, stroke_width, x.base);
+fn pixelBoundaryFromDesignX(w: i32, stroke_width: i32, x: glyphs.DesignBoundaryX) PixelBoundary {
+    const boundary = pixelBoundaryFromDesignBaseX(w, stroke_width, x.base);
     return boundary.adjust(stroke_width, x.adjust);
 }
-fn pixelBoundaryFromAdjustableDesignY(h: i32, stroke_width: i32, y: glyphs.AdjustableDesignBoundaryY) PixelBoundary {
-    const boundary = pixelBoundaryFromDesignY(h, stroke_width, y.base);
+fn pixelBoundaryFromDesignY(h: i32, stroke_width: i32, y: glyphs.DesignBoundaryY) PixelBoundary {
+    const boundary = pixelBoundaryFromDesignBaseY(h, stroke_width, y.base);
     return boundary.adjust(stroke_width, y.adjust);
 }
 
-fn pixelBoundaryFromDesignX(w: i32, stroke_width: i32, x: glyphs.DesignBoundaryX) PixelBoundary {
+fn pixelBoundaryFromDesignBaseX(w: i32, stroke_width: i32, x: glyphs.DesignBoundaryBaseX) PixelBoundary {
     // if x is large enough, we just always use the same floating point
     // multiplier for the position
     const large_enough_ratio: f32 = switch (x) {
         .uppercase_left => 0.210,
         .center => 0.5,
-        .uppercase_right => return pixelBoundaryFromDesignX(w, stroke_width, .uppercase_left).centerReflect(w),
+        .uppercase_right => return pixelBoundaryFromDesignBaseX(w, stroke_width, .uppercase_left).centerReflect(w),
     };
     return PixelBoundary.initFloat(large_enough_ratio * @as(f32, @floatFromInt(w)));
 }
 
-fn pixelBoundaryFromDesignY(h: i32, stroke_width: i32, y: glyphs.DesignBoundaryY) PixelBoundary {
+fn pixelBoundaryFromDesignBaseY(h: i32, stroke_width: i32, y: glyphs.DesignBoundaryBaseY) PixelBoundary {
     // if y is large enough, we just always use the same floating point
     // multiplier for the position
     const large_enough_ratio: f32 = switch (y) {
@@ -482,8 +482,8 @@ fn pixelBoundaryFromDesignY(h: i32, stroke_width: i32, y: glyphs.DesignBoundaryY
         ._1_slanty_bottom => 0.266,
         .lowercase_top => 0.4,
         .uppercase_center => {
-            const top: f32 = @floatFromInt(pixelBoundaryFromDesignY(h, stroke_width, .uppercase_top).adjust(stroke_width, .@"-0.5").rounded);
-            const bottom: f32 = @floatFromInt(pixelBoundaryFromDesignY(h, stroke_width, .baseline_stroke).rounded);
+            const top: f32 = @floatFromInt(pixelBoundaryFromDesignBaseY(h, stroke_width, .uppercase_top).adjust(stroke_width, .@"-0.5").rounded);
+            const bottom: f32 = @floatFromInt(pixelBoundaryFromDesignBaseY(h, stroke_width, .baseline_stroke).rounded);
             return PixelBoundary.initFloat(top + (bottom - top) / 2.0);
         },
         .baseline_stroke => 0.71,
