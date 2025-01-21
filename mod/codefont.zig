@@ -39,6 +39,7 @@ pub fn render(
     // TODO: add option for vertical direction
 ) void {
     std.debug.assert(width <= height);
+
     // Ideas
     //     - loop through each pixel and determine it's color vs a custom
     //       iteration that just sets pixel values, could combine these strategies
@@ -48,9 +49,14 @@ pub fn render(
     //     - every operation could have a bounding rectangle that we check
     //       before doing any calculation
     const ops = getOps(grapheme_utf8);
-    for (0..height) |row| {
+
+    const boundaries = getClipBoundaries(width, height, ops);
+    // TODO: the first thing we should do is go over all the operations and find out the global
+    //       clip boundaries so we can forego calling our shader for any pixels we know will
+    //       be clear
+    for (boundaries.row_start..boundaries.row_limit) |row| {
         const row_offset = row * stride;
-        for (0..width) |col| {
+        for (boundaries.col_start..boundaries.col_limit) |col| {
             grayscale[row_offset + col] = pixelShaderOps(
                 width,
                 height,
@@ -67,6 +73,25 @@ fn getOps(grapheme_utf8: []const u8) []const glyphs.Op {
         inline else => |c| if (@hasDecl(glyphs.c, &[_]u8{c})) &@field(glyphs.c, &[_]u8{c}) else &glyphs.todo,
     };
     return &glyphs.todo;
+}
+
+const ClipBoundaries = struct {
+    row_start: usize,
+    row_limit: usize,
+    col_start: usize,
+    col_limit: usize,
+};
+fn getClipBoundaries(w: i32, h: i32, ops: []const glyphs.Op) ClipBoundaries {
+    var boundaries: ClipBoundaries = .{
+        .row_start = 0,
+        .row_limit = @intCast(h),
+        .col_start = 0,
+        .col_limit = @intCast(w),
+    };
+    // TODO: loop over all the operations and derive any global clip boundaries from them
+    _ = &boundaries;
+    _ = ops;
+    return boundaries;
 }
 
 // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
