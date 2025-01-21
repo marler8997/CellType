@@ -29,35 +29,48 @@ pub fn clear(
     }
 }
 
+pub const Config = struct {
+    _1_has_bottom_bar: bool = true,
+};
+
 pub fn render(
+    config: *const Config,
     comptime Dim: type,
     width: Dim,
     height: Dim,
     grayscale: [*]u8,
     stride: usize,
     grapheme_utf8: []const u8,
-    // TODO: add option for vertical direction
+    opt: struct {
+        output_precleared: bool,
+        // TODO: add option for vertical direction
+    },
 ) void {
     std.debug.assert(width <= height);
 
-    // Ideas
-    //     - loop through each pixel and determine it's color vs a custom
-    //       iteration that just sets pixel values, could combine these strategies
-    //     - layers?  Additive/Subtractive layers?
-    //     - split the graphic into retangles and render each subrectangle
-    //       independently (could even be paralellized?!?)
-    //     - every operation could have a bounding rectangle that we check
-    //       before doing any calculation
     const ops = getOps(grapheme_utf8);
 
+    // NOTE: the ClipBoundaries are purely an optimization for the
+    //       CPU renderer, they should not affect the output and should
+    //       not be used in a GPU-based renderer.
     const boundaries = getClipBoundaries(width, height, ops);
-    // TODO: the first thing we should do is go over all the operations and find out the global
-    //       clip boundaries so we can forego calling our shader for any pixels we know will
-    //       be clear
+    if (!opt.output_precleared) {
+        for (boundaries.row_start..boundaries.row_limit) |row| {
+            const row_grayscale = grayscale[row * stride ..];
+            if (row < boundaries.row_start or row >= boundaries.row_limit) {
+                @memset(row_grayscale[0..width], 0);
+            } else {
+                @memset(row_grayscale[0..boundaries.col_start], 0);
+                @memset(row_grayscale[boundaries.col_limit..width], 0);
+            }
+        }
+    }
+
     for (boundaries.row_start..boundaries.row_limit) |row| {
         const row_offset = row * stride;
         for (boundaries.col_start..boundaries.col_limit) |col| {
             grayscale[row_offset + col] = pixelShaderOps(
+                config,
                 width,
                 height,
                 @intCast(col),
@@ -97,7 +110,7 @@ fn getClipBoundaries(w: i32, h: i32, ops: []const glyphs.Op) ClipBoundaries {
 // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 // TODO: have a version of this that instead of ops, takes bytes: []const u8 and
 //       decodes the bytes into ops as it goes and runs this function
-fn pixelShaderOps(w: i32, h: i32, col: i32, row: i32, ops: []const glyphs.Op) u8 {
+fn pixelShaderOps(config: *const Config, w: i32, h: i32, col: i32, row: i32, ops: []const glyphs.Op) u8 {
     var max: u8 = 0;
     var clip_count: u8 = 0;
     for (ops) |*op| {
@@ -105,7 +118,7 @@ fn pixelShaderOps(w: i32, h: i32, col: i32, row: i32, ops: []const glyphs.Op) u8
             clip_count -= 1;
             continue;
         }
-        max = @max(max, switch (pixelShaderOp(w, h, col, row, op)) {
+        max = @max(max, switch (pixelShaderOp(config, w, h, col, row, op)) {
             .max_candidate => |candidate| candidate,
             .clip => |count| {
                 if (count == 0) return max;
@@ -117,11 +130,10 @@ fn pixelShaderOps(w: i32, h: i32, col: i32, row: i32, ops: []const glyphs.Op) u8
     }
     return max;
 }
-fn pixelShaderOp(w: i32, h: i32, col: i32, row: i32, op: *const glyphs.Op) ShaderResult {
+fn pixelShaderOp(config: *const Config, w: i32, h: i32, col: i32, row: i32, op: *const glyphs.Op) ShaderResult {
     switch (op.condition) {
         .yes => {},
-        ._1_has_bottom_bar => return .{ .max_candidate = 0 }, // disable for now
-        //._1_has_bottom_bar => {},
+        ._1_has_bottom_bar => if (!config._1_has_bottom_bar) return .{ .max_candidate = 0 },
     }
     return switch (op.op) {
         inline else => |*args, tag| @field(shaders, @tagName(tag))(

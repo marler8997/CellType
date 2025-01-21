@@ -149,15 +149,19 @@ fn drawGrapheme(
 
     const stride = (size.x + 3) & ~@as(u32, 3);
 
-    // no need to clear since we just created the bitmap
-    //codefont.clear();
+    const config: codefont.Config = .{
+        ._1_has_bottom_bar = true,
+    };
     codefont.render(
+        &config,
         u16,
         size.x,
         size.y,
         @ptrCast(maybe_bits orelse @panic("possible?")),
         stride,
         grapheme,
+        // the bitmap is pre-zeroed for us since we just created it
+        .{ .output_precleared = true },
     );
 
     const mem_dc = win32.CreateCompatibleDC(hdc);
