@@ -165,7 +165,7 @@ pub fn paint(
         var x: i32 = margin;
         for (graphemes) |grapheme| {
             const config: codefont.Config = .{
-                ._1_has_bottom_bar = true,
+                .serif = true,
             };
             const stroke_width = blk: {
                 // good for testing

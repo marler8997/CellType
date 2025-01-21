@@ -97,7 +97,7 @@ pub const StrokeCurve = struct {
 
 pub const Condition = enum {
     yes,
-    _1_has_bottom_bar,
+    serif,
 };
 
 pub const Op = struct {
@@ -132,11 +132,11 @@ pub const c = struct {
             .b = .{ .x = .{ .base = .center, .adjust = .@"-0.5" }, .y = .{ .base = .uppercase_top } },
         } } },
         .{ .op = .{ .stroke_vert = .{ .x = .{ .base = .center } } } },
-        .{ .condition = ._1_has_bottom_bar, .op = .{ .clip = .{
+        .{ .op = .{ .clip = .{
             .left = .{ .base = .uppercase_left, .adjust = .@"-0.5" },
             .right = .{ .base = .uppercase_right, .adjust = .@"0.5" },
         } } },
-        .{ .condition = ._1_has_bottom_bar, .op = .{ .stroke_horz = .{ .y = .{ .base = .baseline_stroke } } } },
+        .{ .condition = .serif, .op = .{ .stroke_horz = .{ .y = .{ .base = .baseline_stroke } } } },
     };
     pub const H = [_]Op{
         .{ .op = .{ .clip = .{

@@ -36,7 +36,7 @@ pub fn clear(
 }
 
 pub const Config = struct {
-    _1_has_bottom_bar: bool = true,
+    serif: bool = true,
 };
 
 pub fn render(
@@ -141,7 +141,7 @@ fn pixelShaderOps(config: *const Config, w: i32, h: i32, stroke_width: i32, col:
 fn pixelShaderOp(config: *const Config, w: i32, h: i32, stroke_width: i32, col: i32, row: i32, op: *const glyphs.Op) ShaderResult {
     switch (op.condition) {
         .yes => {},
-        ._1_has_bottom_bar => if (!config._1_has_bottom_bar) return .{ .max_candidate = 0 },
+        .serif => if (!config.serif) return .{ .max_candidate = 0 },
     }
     return switch (op.op) {
         inline else => |*args, tag| @field(shaders, @tagName(tag))(
