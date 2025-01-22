@@ -8,6 +8,7 @@ pub const DesignBoundaryBaseX = enum {
 pub const DesignBoundaryBaseY = enum {
     /// center of uppercase top
     uppercase_top,
+    uppercase_top_quarter,
     lowercase_dot,
     _1_slanty_bottom,
     lowercase_top,
@@ -120,6 +121,47 @@ pub const c = struct {
             .right = .{ .base = .uppercase_right, .half_stroke_adjust = 1 },
         } } },
         .{ .condition = .serif, .op = .{ .stroke_horz = .{ .y = .{ .base = .baseline_stroke } } } },
+    };
+    pub const @"2" = [_]Op{
+        .{ .op = .{ .clip = .{
+            .left = .{ .base = .uppercase_left, .half_stroke_adjust = -1 },
+            .right = .{ .base = .uppercase_right, .half_stroke_adjust = 1 },
+            .top = .{ .base = .uppercase_top, .half_stroke_adjust = -1 },
+            .bottom = .{ .base = .baseline_stroke, .half_stroke_adjust = 1 },
+        } } },
+        // top left
+        .{ .op = .{
+            .stroke_curve = .{
+                .start = .{ .x = .{ .base = .uppercase_left }, .y = .{ .base = .uppercase_top_quarter } },
+                .control = .{ .x = .{ .base = .uppercase_left }, .y = .{ .base = .uppercase_top } },
+                .end = .{ .x = .{ .base = .center }, .y = .{ .base = .uppercase_top } },
+            },
+        } },
+        // top right
+        .{ .op = .{
+            .stroke_curve = .{
+                .start = .{ .x = .{ .base = .center }, .y = .{ .base = .uppercase_top } },
+                .control = .{ .x = .{ .base = .uppercase_right }, .y = .{ .base = .uppercase_top } },
+                .end = .{ .x = .{ .base = .uppercase_right }, .y = .{ .base = .uppercase_top_quarter } },
+            },
+        } },
+        // middle right
+        .{ .op = .{
+            .stroke_curve = .{
+                .start = .{ .x = .{ .base = .uppercase_right }, .y = .{ .base = .uppercase_top_quarter } },
+                .control = .{ .x = .{ .base = .uppercase_right }, .y = .{ .base = .uppercase_center, .half_stroke_adjust = -1 } },
+                .end = .{ .x = .{ .base = .center }, .y = .{ .base = .uppercase_center, .half_stroke_adjust = 1 } },
+            },
+        } },
+        // middle left
+        .{ .op = .{
+            .stroke_curve = .{
+                .start = .{ .x = .{ .base = .center }, .y = .{ .base = .uppercase_center, .half_stroke_adjust = 1 } },
+                .control = .{ .x = .{ .base = .uppercase_left }, .y = .{ .base = .uppercase_center, .half_stroke_adjust = 3 } },
+                .end = .{ .x = .{ .base = .uppercase_left }, .y = .{ .base = .baseline_stroke, .half_stroke_adjust = -1 } },
+            },
+        } },
+        .{ .op = .{ .stroke_horz = .{ .y = .{ .base = .baseline_stroke } } } },
     };
     pub const H = [_]Op{
         .{ .op = .{ .clip = .{

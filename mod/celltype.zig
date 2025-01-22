@@ -625,6 +625,11 @@ fn pixelBoundaryFromDesignBaseY(h: i32, stroke_width: i32, y: glyphs.DesignBound
     // multiplier for the position
     const large_enough_ratio: f32 = switch (y) {
         .uppercase_top => 0.2,
+        .uppercase_top_quarter => {
+            const top = pixelBoundaryFromDesignBaseY(h, stroke_width, .uppercase_top);
+            const baseline = pixelBoundaryFromDesignBaseY(h, stroke_width, .baseline_stroke);
+            return top.centerBetween(baseline).centerBetween(top);
+        },
         .lowercase_dot => return pixelBoundaryFromDesignBaseY(
             h,
             stroke_width,
