@@ -6,7 +6,7 @@ const win32 = @import("win32").everything;
 const gdi = @import("gdi.zig");
 const XY = @import("xy.zig").XY;
 
-const codefont = @import("codefont");
+const celltype = @import("celltype");
 
 const window_style_ex = win32.WINDOW_EX_STYLE{};
 const window_style = win32.WS_OVERLAPPEDWINDOW;
@@ -15,7 +15,7 @@ const global = struct {
     var hwnd: win32.HWND = undefined;
     var arena_instance = std.heap.ArenaAllocator.init(std.heap.page_allocator);
     var gdi_cache: gdi.ObjectCache = .{};
-    var font_weight: f32 = codefont.default_weight;
+    var font_weight: f32 = celltype.default_weight;
 };
 
 pub export fn wWinMain(
@@ -40,7 +40,7 @@ pub export fn wWinMain(
     return 0;
 }
 fn winmain() !void {
-    const CLASS_NAME = win32.L("CodefontViewer");
+    const CLASS_NAME = win32.L("CellTypeViewer");
     {
         const wc = win32.WNDCLASSEXW{
             .cbSize = @sizeOf(win32.WNDCLASSEXW),
@@ -62,7 +62,7 @@ fn winmain() !void {
     global.hwnd = win32.CreateWindowExW(
         window_style_ex,
         CLASS_NAME,
-        win32.L("Codefont Viewer"),
+        win32.L("CellType Viewer"),
         window_style,
         win32.CW_USEDEFAULT,
         win32.CW_USEDEFAULT,

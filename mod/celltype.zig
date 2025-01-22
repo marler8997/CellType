@@ -1,7 +1,6 @@
 // assumption: width is always <= height. this assumption
 //             helps simplify things
 const std = @import("std");
-const CodefontRenderer = @This();
 
 const curve = @import("curve.zig");
 const glyphs = @import("glyphs.zig");

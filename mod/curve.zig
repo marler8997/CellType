@@ -1,7 +1,7 @@
 const std = @import("std");
 
-const codefont = @import("codefont.zig");
-const Coord = codefont.Coord;
+const celltype = @import("celltype.zig");
+const Coord = celltype.Coord;
 
 pub fn findClosestPointOnQuadraticBezier(
     point: Coord(f32),
@@ -10,13 +10,13 @@ pub fn findClosestPointOnQuadraticBezier(
     p2: Coord(f32),
 ) f32 {
     // The quadratic Bezier curve is defined as:
-    // B(t) = (1-t)²p0 + 2(1-t)tp1 + t²p2
+    // B(t) = (1-t)Â²p0 + 2(1-t)tp1 + tÂ²p2
     //
     // To find closest point, we need to minimize:
-    // D(t) = |B(t) - point|²
+    // D(t) = |B(t) - point|Â²
     //
     // This leads to a cubic equation in the form:
-    // at³ + bt² + ct + d = 0
+    // atÂ³ + btÂ² + ct + d = 0
 
     const ax = p0.x - 2 * p1.x + p2.x;
     const ay = p0.y - 2 * p1.y + p2.y;
@@ -40,7 +40,7 @@ pub fn findClosestPointOnQuadraticBezier(
     for (roots) |t| {
         if (t >= 0 and t <= 1) {
             const pt = evaluateQuadraticBezier(t, p0, p1, p2);
-            const dist = codefont.calcDist(point.x, point.y, pt.x, pt.y);
+            const dist = celltype.calcDist(point.x, point.y, pt.x, pt.y);
             if (dist < min_dist) {
                 min_dist = dist;
                 best_t = t;
@@ -49,13 +49,13 @@ pub fn findClosestPointOnQuadraticBezier(
     }
 
     // Also check endpoints
-    const dist0 = codefont.calcDist(point.x, point.y, p0.x, p0.y);
+    const dist0 = celltype.calcDist(point.x, point.y, p0.x, p0.y);
     if (dist0 < min_dist) {
         min_dist = dist0;
         best_t = 0;
     }
 
-    const dist1 = codefont.calcDist(point.x, point.y, p2.x, p2.y);
+    const dist1 = celltype.calcDist(point.x, point.y, p2.x, p2.y);
     if (dist1 < min_dist) {
         min_dist = dist1;
         best_t = 1;
@@ -79,7 +79,7 @@ fn solveCubic(a: f32, b: f32, c: f32, d: f32) [3]f32 {
         return solveQuadratic(b, c, d);
     }
 
-    // Convert to depressed cubic t³ + pt + q = 0
+    // Convert to depressed cubic tÂ³ + pt + q = 0
     const p = (3.0 * a * c - b * b) / (3.0 * a * a);
     const q = (2.0 * b * b * b - 9.0 * a * b * c + 27.0 * a * a * d) / (27.0 * a * a * a);
 

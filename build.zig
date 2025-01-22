@@ -4,8 +4,8 @@ pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
-    const codefont_mod = b.addModule("codefont", .{
-        .root_source_file = b.path("mod/codefont.zig"),
+    const celltype_mod = b.addModule("celltype", .{
+        .root_source_file = b.path("mod/celltype.zig"),
     });
 
     {
@@ -19,7 +19,7 @@ pub fn build(b: *std.Build) void {
             .optimize = optimize,
             .win32_manifest = b.path("viewer/win32.manifest"),
         });
-        exe.root_module.addImport("codefont", codefont_mod);
+        exe.root_module.addImport("celltype", celltype_mod);
 
         switch (target.result.os.tag) {
             .windows => if (b.lazyDependency("win32", .{})) |win32_dep| {

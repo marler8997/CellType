@@ -1,5 +1,5 @@
 .{
-    .name = "codefont",
+    .name = "celltype",
     .version = "0.0.0",
     .dependencies = .{
         .win32 = .{

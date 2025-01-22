@@ -1,10 +1,10 @@
-# Codefont
+# CellType
 
 Highly configurable, programmatic, GPU-friendly text rendering.
 
 ## Overview
 
-Codefont is a new font technology that reimagines how digital fonts are defined and rendered. Unlike traditional font formats that rely on fixed outlines, Codefont uses a dynamic approach that enables runtime configuration of font properties like weight/alignment/position while maintaining crisp rendering of straight lines.
+CellType is a new font technology that reimagines how digital fonts are defined and rendered. Unlike traditional font formats that rely on fixed outlines, CellType uses a dynamic approach that enables runtime configuration of font properties like weight/alignment/position while maintaining crisp rendering of straight lines.
 
 ## Key Features
 
@@ -23,8 +23,8 @@ Codefont is a new font technology that reimagines how digital fonts are defined 
 
 ## Named Coordinate System
 
-Traditional font technologies like TrueType use a fixed design coordinate system where glyph points are positioned using absolute values. Codefont replaces this with a named coordinate system. Instead of fixed values, positions are defined using semantic names like "baseline_stroke". These named coordinates can be dynamically mapped to different pixel values at runtime, enabling flexible font adjustment.
+Traditional font technologies like TrueType use a fixed design coordinate system where glyph points are positioned using absolute values. CellType replaces this with a named coordinate system. Instead of fixed values, positions are defined using semantic names like "baseline_stroke". These named coordinates can be dynamically mapped to different pixel values at runtime, enabling flexible font adjustment.
 
 ## Stroke-Based Primitives
 
-While traditional fonts define characters using outline points, Codefont is configured at a higher level using stroke-based properties. This approach allows a single font definition to support any stroke width without requiring redefinition of the primitives or multiple font files.
+While traditional fonts define characters using outline points, CellType is configured at a higher level using stroke-based properties. This approach allows a single font definition to support any stroke width without requiring redefinition of the primitives or multiple font files.

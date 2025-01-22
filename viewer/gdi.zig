@@ -1,7 +1,7 @@
 const std = @import("std");
 const win32 = @import("win32").everything;
 
-const codefont = @import("codefont");
+const celltype = @import("celltype");
 
 const Rgb8 = @import("Rgb8.zig");
 const XY = @import("xy.zig").XY;
@@ -164,15 +164,15 @@ pub fn paint(
     for (sizes) |size| {
         var x: i32 = margin;
         for (graphemes) |grapheme| {
-            const config: codefont.Config = .{
+            const config: celltype.Config = .{
                 .serif = true,
             };
             const stroke_width = blk: {
                 // good for testing
                 //if (true) break :blk 1;
-                break :blk codefont.calcStrokeWidth(u16, size.x, font_weight);
+                break :blk celltype.calcStrokeWidth(u16, size.x, font_weight);
             };
-            codefont.render(
+            celltype.render(
                 &config,
                 u16,
                 size.x,
