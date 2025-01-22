@@ -19,11 +19,11 @@ rounded: i32,
 stroke_bias: StrokeBias,
 
 pub fn fromDesignX(w: i32, stroke_width: i32, x: design.BoundaryX) PixelBoundary {
-    const boundary = fromDesignBaseX(w, stroke_width, x.base);
+    const boundary = fromDesignBaseX(w, stroke_width, x.base).betweenX(w, stroke_width, x.between);
     return boundary.adjust(stroke_width, x.half_stroke_adjust);
 }
 pub fn fromDesignY(h: i32, stroke_width: i32, y: design.BoundaryY) PixelBoundary {
-    const boundary = fromDesignBaseY(h, stroke_width, y.base);
+    const boundary = fromDesignBaseY(h, stroke_width, y.base).betweenY(h, stroke_width, y.between);
     return boundary.adjust(stroke_width, y.half_stroke_adjust);
 }
 
@@ -46,14 +46,16 @@ pub fn fromDesignBaseY(h: i32, stroke_width: i32, y: design.BoundaryBaseY) Pixel
         .uppercase_top_quarter => {
             const top = fromDesignBaseY(h, stroke_width, .uppercase_top);
             const baseline = fromDesignBaseY(h, stroke_width, .baseline_stroke);
-            return top.centerBetween(baseline).centerBetween(top);
+            // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+            return top.between(baseline, 0.5).between(top, 0.5);
         },
         .lowercase_dot => return fromDesignBaseY(
             h,
             stroke_width,
             .lowercase_top,
-        ).adjust(stroke_width, -1).centerBetween(
+        ).adjust(stroke_width, -1).between(
             PixelBoundary{ .rounded = 0, .stroke_bias = .pos },
+            0.5,
         ),
         ._1_slanty_bottom => 0.266,
         .lowercase_top => 0.4,
@@ -61,8 +63,9 @@ pub fn fromDesignBaseY(h: i32, stroke_width: i32, y: design.BoundaryBaseY) Pixel
             h,
             stroke_width,
             .uppercase_top,
-        ).centerBetween(
+        ).between(
             fromDesignBaseY(h, stroke_width, .baseline_stroke),
+            0.5,
         ),
         .baseline_stroke => 0.71,
     };
@@ -84,7 +87,15 @@ pub fn centerReflect(self: PixelBoundary, size: i32) PixelBoundary {
         .stroke_bias = self.stroke_bias.flip(),
     };
 }
-pub fn centerBetween(self: PixelBoundary, other: PixelBoundary) PixelBoundary {
+
+pub fn betweenX(self: PixelBoundary, w: i32, stroke_width: i32, maybe: ?design.BetweenX) PixelBoundary {
+    return if (maybe) |b| self.between(fromDesignBaseX(w, stroke_width, b.base), b.ratio) else self;
+}
+pub fn betweenY(self: PixelBoundary, h: i32, stroke_width: i32, maybe: ?design.BetweenY) PixelBoundary {
+    return if (maybe) |b| self.between(fromDesignBaseY(h, stroke_width, b.base), b.ratio) else self;
+}
+pub fn between(self: PixelBoundary, other: PixelBoundary, ratio: f32) PixelBoundary {
+    if (ratio - 0.5 >= 0.01) @panic("todo");
     const self_slot = self.rounded * 2 + @as(i32, if (self.stroke_bias == .pos) 1 else 0);
     const other_slot = other.rounded * 2 + @as(i32, if (other.stroke_bias == .pos) 1 else 0);
     const diff = other_slot - self_slot;
@@ -96,6 +107,7 @@ pub fn centerBetween(self: PixelBoundary, other: PixelBoundary) PixelBoundary {
         .stroke_bias = if (0 == (@mod(center_slot, 2))) .neg else .pos,
     };
 }
+
 pub fn adjust(self: PixelBoundary, stroke_width: i32, half_stroke_offset: i8) PixelBoundary {
     if ((half_stroke_offset & 1) == 0) return .{
         .rounded = self.rounded + stroke_width * @divExact(half_stroke_offset, 2),

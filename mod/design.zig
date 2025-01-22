@@ -17,12 +17,24 @@ pub const BoundaryBaseY = enum {
     baseline_stroke,
 };
 
+pub const BetweenX = struct {
+    base: BoundaryBaseX,
+    ratio: f32,
+};
+
+pub const BetweenY = struct {
+    base: BoundaryBaseY,
+    ratio: f32,
+};
+
 pub const BoundaryX = struct {
     base: BoundaryBaseX,
+    between: ?BetweenX = null,
     half_stroke_adjust: i8 = 0,
 };
 pub const BoundaryY = struct {
     base: BoundaryBaseY,
+    between: ?BetweenY = null,
     half_stroke_adjust: i8 = 0,
 };
 
