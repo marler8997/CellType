@@ -388,6 +388,19 @@ const PixelBoundary = struct {
             .stroke_bias = self.stroke_bias.flip(),
         };
     }
+    pub fn centerBetween(self: PixelBoundary, other: PixelBoundary) PixelBoundary {
+        const self_slot = self.rounded * 2 + @as(i32, if (self.stroke_bias == .pos) 1 else 0);
+        const other_slot = other.rounded * 2 + @as(i32, if (other.stroke_bias == .pos) 1 else 0);
+        const diff = other_slot - self_slot;
+
+        //const odd_add: i32 = if (diff >= 0) 1 else -1;
+        const half: i32 = if ((diff & 1) == 0) @divExact(diff, 2) else @divExact(diff + 1, 2);
+        const center_slot = self_slot + half;
+        return .{
+            .rounded = @divFloor(center_slot, 2),
+            .stroke_bias = if (0 == (@mod(center_slot, 2))) .neg else .pos,
+        };
+    }
     pub fn adjust(self: PixelBoundary, stroke_width: i32, half_stroke_offset: i8) PixelBoundary {
         if ((half_stroke_offset & 1) == 0) return .{
             .rounded = self.rounded + stroke_width * @divExact(half_stroke_offset, 2),
@@ -432,6 +445,65 @@ const PixelBoundary = struct {
         });
     }
 };
+
+fn testCenterBetween(
+    expected: PixelBoundary,
+    a: PixelBoundary,
+    b: PixelBoundary,
+) !void {
+    try std.testing.expectEqual(expected, a.centerBetween(b));
+    try std.testing.expectEqual(expected, b.centerBetween(a));
+}
+
+test "PixelBoundary.centerBetween" {
+    for (&[_]i32{ -100, -10, -1, 0, 1, 10, 40 }) |boundary| {
+        try testCenterBetween(
+            PixelBoundary{ .rounded = boundary, .stroke_bias = .neg },
+            PixelBoundary{ .rounded = boundary, .stroke_bias = .neg },
+            PixelBoundary{ .rounded = boundary, .stroke_bias = .neg },
+        );
+        try testCenterBetween(
+            PixelBoundary{ .rounded = boundary, .stroke_bias = .pos },
+            PixelBoundary{ .rounded = boundary, .stroke_bias = .pos },
+            PixelBoundary{ .rounded = boundary, .stroke_bias = .pos },
+        );
+        try testCenterBetween(
+            PixelBoundary{ .rounded = boundary, .stroke_bias = .pos },
+            PixelBoundary{ .rounded = boundary, .stroke_bias = .neg },
+            PixelBoundary{ .rounded = boundary, .stroke_bias = .pos },
+        );
+        try testCenterBetween(
+            PixelBoundary{ .rounded = boundary, .stroke_bias = .pos },
+            PixelBoundary{ .rounded = boundary, .stroke_bias = .neg },
+            PixelBoundary{ .rounded = boundary + 1, .stroke_bias = .neg },
+        );
+        try testCenterBetween(
+            PixelBoundary{ .rounded = boundary + 1, .stroke_bias = .neg },
+            PixelBoundary{ .rounded = boundary, .stroke_bias = .pos },
+            PixelBoundary{ .rounded = boundary + 1, .stroke_bias = .neg },
+        );
+        try testCenterBetween(
+            PixelBoundary{ .rounded = boundary + 1, .stroke_bias = .neg },
+            PixelBoundary{ .rounded = boundary, .stroke_bias = .pos },
+            PixelBoundary{ .rounded = boundary + 1, .stroke_bias = .pos },
+        );
+        try testCenterBetween(
+            PixelBoundary{ .rounded = boundary, .stroke_bias = .neg },
+            PixelBoundary{ .rounded = boundary, .stroke_bias = .pos },
+            PixelBoundary{ .rounded = boundary - 1, .stroke_bias = .pos },
+        );
+        try testCenterBetween(
+            PixelBoundary{ .rounded = boundary - 1, .stroke_bias = .pos },
+            PixelBoundary{ .rounded = boundary, .stroke_bias = .neg },
+            PixelBoundary{ .rounded = boundary - 1, .stroke_bias = .neg },
+        );
+        try testCenterBetween(
+            PixelBoundary{ .rounded = boundary, .stroke_bias = .neg },
+            PixelBoundary{ .rounded = boundary, .stroke_bias = .neg },
+            PixelBoundary{ .rounded = boundary - 1, .stroke_bias = .pos },
+        );
+    }
+}
 
 test "adjusting boundaries" {
     try std.testing.expectEqual(
@@ -553,23 +625,22 @@ fn pixelBoundaryFromDesignBaseY(h: i32, stroke_width: i32, y: glyphs.DesignBound
     // multiplier for the position
     const large_enough_ratio: f32 = switch (y) {
         .uppercase_top => 0.2,
-        .lowercase_dot => {
-            const lowercase_top = pixelBoundaryFromDesignBaseY(h, stroke_width, .lowercase_top).adjust(stroke_width, -1);
-            return .{
-                .rounded = @divTrunc(lowercase_top.rounded + switch (lowercase_top.stroke_bias) {
-                    .pos => @as(i32, 1),
-                    .neg => @as(i32, 0),
-                }, 2),
-                .stroke_bias = lowercase_top.stroke_bias.flip(),
-            };
-        },
+        .lowercase_dot => return pixelBoundaryFromDesignBaseY(
+            h,
+            stroke_width,
+            .lowercase_top,
+        ).adjust(stroke_width, -1).centerBetween(
+            PixelBoundary{ .rounded = 0, .stroke_bias = .pos },
+        ),
         ._1_slanty_bottom => 0.266,
         .lowercase_top => 0.4,
-        .uppercase_center => {
-            const top: f32 = @floatFromInt(pixelBoundaryFromDesignBaseY(h, stroke_width, .uppercase_top).adjust(stroke_width, -1).rounded);
-            const bottom: f32 = @floatFromInt(pixelBoundaryFromDesignBaseY(h, stroke_width, .baseline_stroke).rounded);
-            return PixelBoundary.initFloat(top + (bottom - top) / 2.0);
-        },
+        .uppercase_center => return pixelBoundaryFromDesignBaseY(
+            h,
+            stroke_width,
+            .uppercase_top,
+        ).centerBetween(
+            pixelBoundaryFromDesignBaseY(h, stroke_width, .baseline_stroke),
+        ),
         .baseline_stroke => 0.71,
     };
     return PixelBoundary.initFloat(large_enough_ratio * @as(f32, @floatFromInt(h)));
