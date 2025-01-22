@@ -556,7 +556,16 @@ fn pixelBoundaryFromDesignBaseY(h: i32, stroke_width: i32, y: glyphs.DesignBound
     // multiplier for the position
     const large_enough_ratio: f32 = switch (y) {
         .uppercase_top => 0.2,
-        .lowercase_dot => 0.22,
+        .lowercase_dot => {
+            const lowercase_top = pixelBoundaryFromDesignBaseY(h, stroke_width, .lowercase_top).adjust(stroke_width, -1);
+            return .{
+                .rounded = @divTrunc(lowercase_top.rounded + switch (lowercase_top.stroke_bias) {
+                    .pos => @as(i32, 1),
+                    .neg => @as(i32, 0),
+                }, 2),
+                .stroke_bias = lowercase_top.stroke_bias.flip(),
+            };
+        },
         ._1_slanty_bottom => 0.266,
         .lowercase_top => 0.4,
         .uppercase_center => {
