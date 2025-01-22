@@ -166,12 +166,12 @@ const Extent = struct {
     }
     pub fn initStrokeX(w: i32, stroke_width: i32, x: glyphs.DesignBoundaryX) Extent {
         const pixel_boundary = pixelBoundaryFromDesignX(w, stroke_width, x);
-        const high = pixel_boundary.adjust(stroke_width, .@"0.5").rounded;
+        const high = pixel_boundary.adjust(stroke_width, 1).rounded;
         return .{ .low = high - stroke_width, .high = high };
     }
     pub fn initStrokeY(h: i32, stroke_width: i32, y: glyphs.DesignBoundaryY) Extent {
         const pixel_boundary = pixelBoundaryFromDesignY(h, stroke_width, y);
-        const high = pixel_boundary.adjust(stroke_width, .@"0.5").rounded;
+        const high = pixel_boundary.adjust(stroke_width, 1).rounded;
         return .{ .low = high - stroke_width, .high = high };
     }
 };
@@ -391,19 +391,20 @@ const PixelBoundary = struct {
             .stroke_bias = self.stroke_bias.flip(),
         };
     }
-    pub fn adjust(self: PixelBoundary, stroke_width: i32, stroke_offset: glyphs.StrokeOffset) PixelBoundary {
+    pub fn adjust(self: PixelBoundary, stroke_width: i32, stroke_offset: i8) PixelBoundary {
         const direction: StrokeBias = switch (stroke_offset) {
-            .@"-1" => return .{
+            -2 => return .{
                 .rounded = self.rounded - stroke_width,
                 .stroke_bias = self.stroke_bias,
             },
-            .@"-0.5" => .neg,
-            .@"0" => return self,
-            .@"0.5" => .pos,
-            .@"1" => return .{
+            -1 => .neg,
+            0 => return self,
+            1 => .pos,
+            2 => return .{
                 .rounded = self.rounded + stroke_width,
                 .stroke_bias = self.stroke_bias,
             },
+            else => std.debug.panic("todo: implement stroke_offset {}", .{stroke_offset}),
         };
 
         if (@as(u31, @intCast(stroke_width)) % 2 == 0) return .{
@@ -454,11 +455,11 @@ test "adjusting boundaries" {
 
 fn pixelBoundaryFromDesignX(w: i32, stroke_width: i32, x: glyphs.DesignBoundaryX) PixelBoundary {
     const boundary = pixelBoundaryFromDesignBaseX(w, stroke_width, x.base);
-    return boundary.adjust(stroke_width, x.adjust);
+    return boundary.adjust(stroke_width, x.half_stroke_adjust);
 }
 fn pixelBoundaryFromDesignY(h: i32, stroke_width: i32, y: glyphs.DesignBoundaryY) PixelBoundary {
     const boundary = pixelBoundaryFromDesignBaseY(h, stroke_width, y.base);
-    return boundary.adjust(stroke_width, y.adjust);
+    return boundary.adjust(stroke_width, y.half_stroke_adjust);
 }
 
 fn pixelBoundaryFromDesignBaseX(w: i32, stroke_width: i32, x: glyphs.DesignBoundaryBaseX) PixelBoundary {
@@ -481,7 +482,7 @@ fn pixelBoundaryFromDesignBaseY(h: i32, stroke_width: i32, y: glyphs.DesignBound
         ._1_slanty_bottom => 0.266,
         .lowercase_top => 0.4,
         .uppercase_center => {
-            const top: f32 = @floatFromInt(pixelBoundaryFromDesignBaseY(h, stroke_width, .uppercase_top).adjust(stroke_width, .@"-0.5").rounded);
+            const top: f32 = @floatFromInt(pixelBoundaryFromDesignBaseY(h, stroke_width, .uppercase_top).adjust(stroke_width, -1).rounded);
             const bottom: f32 = @floatFromInt(pixelBoundaryFromDesignBaseY(h, stroke_width, .baseline_stroke).rounded);
             return PixelBoundary.initFloat(top + (bottom - top) / 2.0);
         },
