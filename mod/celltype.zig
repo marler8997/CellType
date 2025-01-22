@@ -166,12 +166,12 @@ const Extent = struct {
     }
     pub fn initStrokeX(w: i32, stroke_width: i32, x: design.BoundaryX) Extent {
         const pixel_boundary = PixelBoundary.fromDesignX(w, stroke_width, x);
-        const high = pixel_boundary.adjust(stroke_width, 1).rounded;
+        const high = pixel_boundary.adjust(stroke_width, 1).getRounded();
         return .{ .low = high - stroke_width, .high = high };
     }
     pub fn initStrokeY(h: i32, stroke_width: i32, y: design.BoundaryY) Extent {
         const pixel_boundary = PixelBoundary.fromDesignY(h, stroke_width, y);
-        const high = pixel_boundary.adjust(stroke_width, 1).rounded;
+        const high = pixel_boundary.adjust(stroke_width, 1).getRounded();
         return .{ .low = high - stroke_width, .high = high };
     }
 };
@@ -188,22 +188,22 @@ const shaders = struct {
         if (args.left) |left| {
             have_clip_boundary = true;
             const boundary = PixelBoundary.fromDesignX(w, stroke_width, left);
-            if (col < boundary.rounded) return .{ .clip = args.count };
+            if (col < boundary.getRounded()) return .{ .clip = args.count };
         }
         if (args.right) |right| {
             have_clip_boundary = true;
             const boundary = PixelBoundary.fromDesignX(w, stroke_width, right);
-            if (col >= boundary.rounded) return .{ .clip = args.count };
+            if (col >= boundary.getRounded()) return .{ .clip = args.count };
         }
         if (args.top) |top| {
             have_clip_boundary = true;
             const boundary = PixelBoundary.fromDesignY(h, stroke_width, top);
-            if (row < boundary.rounded) return .{ .clip = args.count };
+            if (row < boundary.getRounded()) return .{ .clip = args.count };
         }
         if (args.bottom) |bottom| {
             have_clip_boundary = true;
             const boundary = PixelBoundary.fromDesignY(h, stroke_width, bottom);
-            if (row >= boundary.rounded) return .{ .clip = args.count };
+            if (row >= boundary.getRounded()) return .{ .clip = args.count };
         }
         if (!have_clip_boundary) @panic("got clip command with no boundaries");
         return .{ .max_candidate = 0 };
@@ -227,12 +227,12 @@ const shaders = struct {
             .y = @floatFromInt(row),
         };
         const a: Coord(f32) = .{
-            .x = @floatFromInt(PixelBoundary.fromDesignX(w, stroke_width, args.a.x).rounded),
-            .y = @floatFromInt(PixelBoundary.fromDesignY(h, stroke_width, args.a.y).rounded),
+            .x = @floatFromInt(PixelBoundary.fromDesignX(w, stroke_width, args.a.x).getRounded()),
+            .y = @floatFromInt(PixelBoundary.fromDesignY(h, stroke_width, args.a.y).getRounded()),
         };
         const b: Coord(f32) = .{
-            .x = @floatFromInt(PixelBoundary.fromDesignX(w, stroke_width, args.b.x).rounded),
-            .y = @floatFromInt(PixelBoundary.fromDesignY(h, stroke_width, args.b.y).rounded),
+            .x = @floatFromInt(PixelBoundary.fromDesignX(w, stroke_width, args.b.x).getRounded()),
+            .y = @floatFromInt(PixelBoundary.fromDesignY(h, stroke_width, args.b.y).getRounded()),
         };
         const distance = pointToLineDistance(pixel, a, b);
         const half_stroke_width: f32 = @as(f32, @floatFromInt(stroke_width)) / 2.0;
@@ -261,16 +261,16 @@ const shaders = struct {
             col,
             row,
             .{
-                .x = @floatFromInt(PixelBoundary.fromDesignX(w, stroke_width, s.start.x).rounded),
-                .y = @floatFromInt(PixelBoundary.fromDesignY(h, stroke_width, s.start.y).rounded),
+                .x = @floatFromInt(PixelBoundary.fromDesignX(w, stroke_width, s.start.x).getRounded()),
+                .y = @floatFromInt(PixelBoundary.fromDesignY(h, stroke_width, s.start.y).getRounded()),
             },
             .{
-                .x = @floatFromInt(PixelBoundary.fromDesignX(w, stroke_width, s.control.x).rounded),
-                .y = @floatFromInt(PixelBoundary.fromDesignY(h, stroke_width, s.control.y).rounded),
+                .x = @floatFromInt(PixelBoundary.fromDesignX(w, stroke_width, s.control.x).getRounded()),
+                .y = @floatFromInt(PixelBoundary.fromDesignY(h, stroke_width, s.control.y).getRounded()),
             },
             .{
-                .x = @floatFromInt(PixelBoundary.fromDesignX(w, stroke_width, s.end.x).rounded),
-                .y = @floatFromInt(PixelBoundary.fromDesignY(h, stroke_width, s.end.y).rounded),
+                .x = @floatFromInt(PixelBoundary.fromDesignX(w, stroke_width, s.end.x).getRounded()),
+                .y = @floatFromInt(PixelBoundary.fromDesignY(h, stroke_width, s.end.y).getRounded()),
             },
             @as(f32, @floatFromInt(stroke_width)) / 2.0,
         );
