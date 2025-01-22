@@ -134,6 +134,7 @@ pub fn paint(
         .{ .x = 50, .y = 70 },
         .{ .x = 100, .y = 260 },
         .{ .x = 100, .y = 100 },
+        .{ .x = 200, .y = 100 },
     };
     const max_size = blk: {
         var max: XY(u16) = .{ .x = 0, .y = 0 };
@@ -170,7 +171,7 @@ pub fn paint(
             const stroke_width = blk: {
                 // good for testing
                 //if (true) break :blk 1;
-                break :blk celltype.calcStrokeWidth(u16, size.x, font_weight);
+                break :blk celltype.calcStrokeWidth(u16, size.x, size.y, font_weight);
             };
             celltype.render(
                 &config,

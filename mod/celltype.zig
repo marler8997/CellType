@@ -15,8 +15,8 @@ const glyphs = @import("glyphs.zig");
 //    t = top, b = bottom
 
 pub const default_weight: f32 = 0.2;
-pub fn calcStrokeWidth(comptime T: type, width: T, weight: f32) T {
-    const width_f32: f32 = @floatFromInt(width);
+pub fn calcStrokeWidth(comptime T: type, width: T, height: T, weight: f32) T {
+    const width_f32: f32 = @floatFromInt(@min(width, height));
     return @max(1, @as(T, @intFromFloat(@round(width_f32 * weight))));
 }
 
@@ -27,7 +27,6 @@ pub fn clear(
     out_grayscale: [*]u8,
     out_stride: usize,
 ) void {
-    std.debug.assert(width <= height);
     for (0..height) |row| {
         const row_offset = row * @as(usize, out_stride);
         @memset(out_grayscale[row_offset..][0..width], 0);
@@ -52,8 +51,6 @@ pub fn render(
         // TODO: add option for vertical direction
     },
 ) void {
-    std.debug.assert(width <= height);
-
     const ops = getOps(grapheme_utf8);
 
     // NOTE: the ClipBoundaries are purely an optimization for the
