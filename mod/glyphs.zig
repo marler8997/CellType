@@ -26,6 +26,10 @@ pub const @"1" = [_]Op{
     } } },
     .{ .condition = .serif, .op = .{ .stroke_horz = .{ .y = .{ .base = .baseline_stroke } } } },
 };
+
+const @"2_ratio0" = 0.4;
+const @"2_ratio1" = 0.6;
+const @"2_ratio2" = 0.8;
 pub const @"2" = [_]Op{
     .{ .op = .{ .clip = .{
         .left = .{ .base = .uppercase_left, .half_stroke_adjust = -1 },
@@ -53,15 +57,15 @@ pub const @"2" = [_]Op{
     .{ .op = .{
         .stroke_curve = .{
             .start = .{ .x = .{ .base = .uppercase_right }, .y = .{ .base = .uppercase_top_quarter } },
-            .control = .{ .x = .{ .base = .uppercase_right }, .y = .{ .base = .uppercase_center, .half_stroke_adjust = -1 } },
-            .end = .{ .x = .{ .base = .center }, .y = .{ .base = .uppercase_center, .half_stroke_adjust = 1 } },
+            .control = .{ .x = .{ .base = .uppercase_right }, .y = .{ .base = .uppercase_top, .between = .{ .base = .baseline_stroke, .ratio = @"2_ratio0" } } },
+            .end = .{ .x = .{ .base = .center }, .y = .{ .base = .uppercase_top, .between = .{ .base = .baseline_stroke, .ratio = @"2_ratio1" } } },
         },
     } },
     // middle left
     .{ .op = .{
         .stroke_curve = .{
-            .start = .{ .x = .{ .base = .center }, .y = .{ .base = .uppercase_center, .half_stroke_adjust = 1 } },
-            .control = .{ .x = .{ .base = .uppercase_left }, .y = .{ .base = .uppercase_center, .half_stroke_adjust = 3 } },
+            .start = .{ .x = .{ .base = .center }, .y = .{ .base = .uppercase_top, .between = .{ .base = .baseline_stroke, .ratio = @"2_ratio1" } } },
+            .control = .{ .x = .{ .base = .uppercase_left }, .y = .{ .base = .uppercase_top, .between = .{ .base = .baseline_stroke, .ratio = @"2_ratio2" } } },
             .end = .{ .x = .{ .base = .uppercase_left }, .y = .{ .base = .baseline_stroke, .half_stroke_adjust = -1 } },
         },
     } },
