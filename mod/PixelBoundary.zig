@@ -89,7 +89,6 @@ pub fn centerBetween(self: PixelBoundary, other: PixelBoundary) PixelBoundary {
     const other_slot = other.rounded * 2 + @as(i32, if (other.stroke_bias == .pos) 1 else 0);
     const diff = other_slot - self_slot;
 
-    //const odd_add: i32 = if (diff >= 0) 1 else -1;
     const half: i32 = if ((diff & 1) == 0) @divExact(diff, 2) else @divExact(diff + 1, 2);
     const center_slot = self_slot + half;
     return .{
