@@ -144,11 +144,10 @@ fn WndProc(
         },
         win32.WM_PAINT => {
             const dpi = win32.dpiFromHwnd(hwnd);
-            const client_size = getClientSize(hwnd);
-            var ps: win32.PAINTSTRUCT = undefined;
-            const hdc = win32.BeginPaint(hwnd, &ps) orelse win32.panicWin32("BeginPaint", win32.GetLastError());
+            const client_size = win32.getClientSize(hwnd);
+            const hdc, const ps = win32.beginPaint(hwnd);
             gdi.paint(hdc, dpi, client_size, global.font_weight, &global.gdi_cache);
-            _ = win32.EndPaint(hwnd, &ps);
+            win32.endPaint(hwnd, &ps);
             return 0;
         },
         win32.WM_SIZE => {
@@ -159,15 +158,6 @@ fn WndProc(
         else => {},
     }
     return win32.DefWindowProcW(hwnd, uMsg, wparam, lparam);
-}
-
-pub fn getClientSize(hwnd: win32.HWND) XY(i32) {
-    var rect: win32.RECT = undefined;
-    if (0 == win32.GetClientRect(hwnd, &rect))
-        win32.panicWin32("GetClientRect", win32.GetLastError());
-    std.debug.assert(rect.left == 0);
-    std.debug.assert(rect.top == 0);
-    return .{ .x = rect.right, .y = rect.bottom };
 }
 
 pub fn oom(e: error{OutOfMemory}) noreturn {

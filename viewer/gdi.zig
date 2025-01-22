@@ -46,7 +46,7 @@ pub const ObjectCache = struct {
         if (self.bmp) |cached| {
             if (cached.size.x >= size.x and cached.size.y >= size.y)
                 return cached;
-            deleteObject(cached.section);
+            win32.deleteObject(cached.section);
             self.bmp = null;
         }
 
@@ -88,7 +88,7 @@ pub const ObjectCache = struct {
             null,
             0,
         ) orelse win32.panicWin32("CreateDIBSection", win32.GetLastError());
-        errdefer deleteObject(bmp_section);
+        errdefer win32.deleteObject(bmp_section);
 
         self.bmp = .{
             .size = size,
@@ -106,7 +106,7 @@ fn colorrefFromRgb(rgb: Rgb8) u32 {
 pub fn paint(
     hdc: win32.HDC,
     dpi: u32,
-    client_size: XY(i32),
+    client_size: win32.SIZE,
     font_weight: f32,
     cache: *ObjectCache,
 ) void {
@@ -148,7 +148,7 @@ pub fn paint(
     const bmp_stride = (bmp.size.x + 3) & ~@as(u32, 3);
 
     const mem_hdc = win32.CreateCompatibleDC(hdc);
-    defer deleteDc(mem_hdc);
+    defer win32.deleteDc(mem_hdc);
 
     const old_bmp = win32.SelectObject(mem_hdc, @ptrCast(bmp.section));
     defer _ = win32.SelectObject(mem_hdc, old_bmp);
@@ -160,8 +160,8 @@ pub fn paint(
     };
     var y: i32 = margin;
 
-    fillRect(hdc, .{ .left = 0, .top = 0, .right = client_size.x, .bottom = y }, bg_brush);
-    fillRect(hdc, .{ .left = 0, .top = margin, .right = margin, .bottom = client_size.y }, bg_brush);
+    win32.fillRect(hdc, .{ .left = 0, .top = 0, .right = client_size.cx, .bottom = y }, bg_brush);
+    win32.fillRect(hdc, .{ .left = 0, .top = margin, .right = margin, .bottom = client_size.cy }, bg_brush);
     for (sizes) |size| {
         var x: i32 = margin;
         for (graphemes) |grapheme| {
@@ -197,27 +197,13 @@ pub fn paint(
             )) win32.panicWin32("BitGlt", win32.GetLastError());
 
             x += @as(i32, @intCast(size.x));
-            fillRect(hdc, .{ .left = x, .top = y, .right = x + spacing.x, .bottom = y + size.y }, bg_brush);
+            win32.fillRect(hdc, .{ .left = x, .top = y, .right = x + spacing.x, .bottom = y + size.y }, bg_brush);
             x += spacing.x;
         }
-        fillRect(hdc, .{ .left = x, .top = y, .right = client_size.x, .bottom = y + size.y }, bg_brush);
+        win32.fillRect(hdc, .{ .left = x, .top = y, .right = client_size.cx, .bottom = y + size.y }, bg_brush);
         y += size.y;
-        fillRect(hdc, .{ .left = margin, .top = y, .right = client_size.x, .bottom = y + spacing.y }, bg_brush);
+        win32.fillRect(hdc, .{ .left = margin, .top = y, .right = client_size.cx, .bottom = y + spacing.y }, bg_brush);
         y += spacing.y;
     }
-    fillRect(hdc, .{ .left = 0, .top = y, .right = client_size.x, .bottom = client_size.y }, bg_brush);
-}
-
-fn fillRect(hdc: win32.HDC, rect: win32.RECT, brush: win32.HBRUSH) void {
-    if (0 == win32.FillRect(hdc, &rect, brush)) win32.panicWin32(
-        "FillRect",
-        win32.GetLastError(),
-    );
-}
-
-pub fn deleteObject(obj: ?win32.HGDIOBJ) void {
-    if (0 == win32.DeleteObject(obj)) win32.panicWin32("DeleteObject", win32.GetLastError());
-}
-pub fn deleteDc(obj: win32.HDC) void {
-    if (0 == win32.DeleteDC(obj)) win32.panicWin32("DeleteDC", win32.GetLastError());
+    win32.fillRect(hdc, .{ .left = 0, .top = y, .right = client_size.cx, .bottom = client_size.cy }, bg_brush);
 }
