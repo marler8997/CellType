@@ -3,6 +3,7 @@
 const std = @import("std");
 
 const curve = @import("curve.zig");
+const design = @import("design.zig");
 const glyphs = @import("glyphs.zig");
 
 // Notes:
@@ -85,9 +86,9 @@ pub fn render(
     }
 }
 
-fn getOps(grapheme_utf8: []const u8) []const glyphs.Op {
+fn getOps(grapheme_utf8: []const u8) []const design.Op {
     if (grapheme_utf8.len == 1) return switch (grapheme_utf8[0]) {
-        inline else => |c| if (@hasDecl(glyphs.c, &[_]u8{c})) &@field(glyphs.c, &[_]u8{c}) else &glyphs.todo,
+        inline else => |c| if (@hasDecl(glyphs, &[_]u8{c})) &@field(glyphs, &[_]u8{c}) else &glyphs.todo,
     };
     return &glyphs.todo;
 }
@@ -98,7 +99,7 @@ const ClipBoundaries = struct {
     col_start: usize,
     col_limit: usize,
 };
-fn getClipBoundaries(w: i32, h: i32, ops: []const glyphs.Op) ClipBoundaries {
+fn getClipBoundaries(w: i32, h: i32, ops: []const design.Op) ClipBoundaries {
     var boundaries: ClipBoundaries = .{
         .row_start = 0,
         .row_limit = @intCast(h),
@@ -114,7 +115,7 @@ fn getClipBoundaries(w: i32, h: i32, ops: []const glyphs.Op) ClipBoundaries {
 // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 // TODO: have a version of this that instead of ops, takes bytes: []const u8 and
 //       decodes the bytes into ops as it goes and runs this function
-fn pixelShaderOps(config: *const Config, w: i32, h: i32, stroke_width: i32, col: i32, row: i32, ops: []const glyphs.Op) u8 {
+fn pixelShaderOps(config: *const Config, w: i32, h: i32, stroke_width: i32, col: i32, row: i32, ops: []const design.Op) u8 {
     var max: u8 = 0;
     var clip_count: u8 = 0;
     for (ops) |*op| {
@@ -134,7 +135,7 @@ fn pixelShaderOps(config: *const Config, w: i32, h: i32, stroke_width: i32, col:
     }
     return max;
 }
-fn pixelShaderOp(config: *const Config, w: i32, h: i32, stroke_width: i32, col: i32, row: i32, op: *const glyphs.Op) ShaderResult {
+fn pixelShaderOp(config: *const Config, w: i32, h: i32, stroke_width: i32, col: i32, row: i32, op: *const design.Op) ShaderResult {
     switch (op.condition) {
         .yes => {},
         .serif => if (!config.serif) return .{ .max_candidate = 0 },
@@ -161,12 +162,12 @@ const Extent = struct {
         const low_f32: f32 = @floatFromInt(self.low);
         return low_f32 + (@as(f32, @floatFromInt(self.high)) - low_f32) / 2.0;
     }
-    pub fn initStrokeX(w: i32, stroke_width: i32, x: glyphs.DesignBoundaryX) Extent {
+    pub fn initStrokeX(w: i32, stroke_width: i32, x: design.BoundaryX) Extent {
         const pixel_boundary = pixelBoundaryFromDesignX(w, stroke_width, x);
         const high = pixel_boundary.adjust(stroke_width, 1).rounded;
         return .{ .low = high - stroke_width, .high = high };
     }
-    pub fn initStrokeY(h: i32, stroke_width: i32, y: glyphs.DesignBoundaryY) Extent {
+    pub fn initStrokeY(h: i32, stroke_width: i32, y: design.BoundaryY) Extent {
         const pixel_boundary = pixelBoundaryFromDesignY(h, stroke_width, y);
         const high = pixel_boundary.adjust(stroke_width, 1).rounded;
         return .{ .low = high - stroke_width, .high = high };
@@ -180,7 +181,7 @@ const ShaderResult = union(enum) {
 };
 
 const shaders = struct {
-    fn clip(w: i32, h: i32, stroke_width: i32, col: i32, row: i32, args: *const glyphs.Clip) ShaderResult {
+    fn clip(w: i32, h: i32, stroke_width: i32, col: i32, row: i32, args: *const design.Clip) ShaderResult {
         var have_clip_boundary = false;
         if (args.left) |left| {
             have_clip_boundary = true;
@@ -206,19 +207,19 @@ const shaders = struct {
         return .{ .max_candidate = 0 };
     }
 
-    fn stroke_vert(w: i32, h: i32, stroke_width: i32, col: i32, row: i32, args: *const glyphs.StrokeVert) ShaderResult {
+    fn stroke_vert(w: i32, h: i32, stroke_width: i32, col: i32, row: i32, args: *const design.StrokeVert) ShaderResult {
         _ = h;
         _ = row;
         const extent_x = Extent.initStrokeX(w, stroke_width, args.x);
         return .{ .max_candidate = if (col < extent_x.low or col >= extent_x.high) 0 else 255 };
     }
-    fn stroke_horz(w: i32, h: i32, stroke_width: i32, col: i32, row: i32, args: *const glyphs.StrokeHorz) ShaderResult {
+    fn stroke_horz(w: i32, h: i32, stroke_width: i32, col: i32, row: i32, args: *const design.StrokeHorz) ShaderResult {
         _ = w;
         _ = col;
         const extent_y = Extent.initStrokeY(h, stroke_width, args.y);
         return .{ .max_candidate = if (row < extent_y.low or row >= extent_y.high) 0 else 255 };
     }
-    fn stroke_diag(w: i32, h: i32, stroke_width: i32, col: i32, row: i32, args: *const glyphs.StrokeDiag) ShaderResult {
+    fn stroke_diag(w: i32, h: i32, stroke_width: i32, col: i32, row: i32, args: *const design.StrokeDiag) ShaderResult {
         const pixel: Coord(f32) = .{
             .x = @floatFromInt(col),
             .y = @floatFromInt(row),
@@ -235,7 +236,7 @@ const shaders = struct {
         const half_stroke_width: f32 = @as(f32, @floatFromInt(stroke_width)) / 2.0;
         return antialias(half_stroke_width, distance);
     }
-    fn stroke_dot(w: i32, h: i32, stroke_width: i32, col: i32, row: i32, s: *const glyphs.DesignBoundaryPoint) ShaderResult {
+    fn stroke_dot(w: i32, h: i32, stroke_width: i32, col: i32, row: i32, s: *const design.BoundaryPoint) ShaderResult {
         const extent_x = Extent.initStrokeX(w, stroke_width, s.x);
         const extent_y = Extent.initStrokeY(h, stroke_width, s.y);
         return if (stroke_width <= 2) shaderRectCoords(
@@ -253,7 +254,7 @@ const shaders = struct {
             stroke_width,
         );
     }
-    fn stroke_curve(w: i32, h: i32, stroke_width: i32, col: i32, row: i32, s: *const glyphs.StrokeCurve) ShaderResult {
+    fn stroke_curve(w: i32, h: i32, stroke_width: i32, col: i32, row: i32, s: *const design.StrokeCurve) ShaderResult {
         return shaderCurveCoords(
             col,
             row,
@@ -574,8 +575,8 @@ test "adjusting boundaries" {
         const size: i32 = @intCast(size_usize);
         for (0..100) |stroke_width_usize| {
             const stroke_width: i32 = @intCast(stroke_width_usize);
-            inline for (std.meta.fields(glyphs.DesignBoundaryBaseX)) |x_field| {
-                const x: glyphs.DesignBoundaryBaseX = @enumFromInt(x_field.value);
+            inline for (std.meta.fields(design.BoundaryBaseX)) |x_field| {
+                const x: design.BoundaryBaseX = @enumFromInt(x_field.value);
                 const boundary = pixelBoundaryFromDesignBaseX(size, stroke_width, x);
                 for (0..10) |i_usize| {
                     const i: i8 = @intCast(i_usize);
@@ -585,8 +586,8 @@ test "adjusting boundaries" {
                     try std.testing.expectEqual(pos, pos.adjust(stroke_width, i).adjust(stroke_width, -i));
                 }
             }
-            inline for (std.meta.fields(glyphs.DesignBoundaryBaseY)) |y_field| {
-                const y: glyphs.DesignBoundaryBaseY = @enumFromInt(y_field.value);
+            inline for (std.meta.fields(design.BoundaryBaseY)) |y_field| {
+                const y: design.BoundaryBaseY = @enumFromInt(y_field.value);
                 const boundary = pixelBoundaryFromDesignBaseY(size, stroke_width, y);
                 for (0..10) |i_usize| {
                     const i: i8 = @intCast(i_usize);
@@ -600,16 +601,16 @@ test "adjusting boundaries" {
     }
 }
 
-fn pixelBoundaryFromDesignX(w: i32, stroke_width: i32, x: glyphs.DesignBoundaryX) PixelBoundary {
+fn pixelBoundaryFromDesignX(w: i32, stroke_width: i32, x: design.BoundaryX) PixelBoundary {
     const boundary = pixelBoundaryFromDesignBaseX(w, stroke_width, x.base);
     return boundary.adjust(stroke_width, x.half_stroke_adjust);
 }
-fn pixelBoundaryFromDesignY(h: i32, stroke_width: i32, y: glyphs.DesignBoundaryY) PixelBoundary {
+fn pixelBoundaryFromDesignY(h: i32, stroke_width: i32, y: design.BoundaryY) PixelBoundary {
     const boundary = pixelBoundaryFromDesignBaseY(h, stroke_width, y.base);
     return boundary.adjust(stroke_width, y.half_stroke_adjust);
 }
 
-fn pixelBoundaryFromDesignBaseX(w: i32, stroke_width: i32, x: glyphs.DesignBoundaryBaseX) PixelBoundary {
+fn pixelBoundaryFromDesignBaseX(w: i32, stroke_width: i32, x: design.BoundaryBaseX) PixelBoundary {
     // if x is large enough, we just always use the same floating point
     // multiplier for the position
     const large_enough_ratio: f32 = switch (x) {
@@ -620,7 +621,7 @@ fn pixelBoundaryFromDesignBaseX(w: i32, stroke_width: i32, x: glyphs.DesignBound
     return PixelBoundary.initFloat(large_enough_ratio * @as(f32, @floatFromInt(w)));
 }
 
-fn pixelBoundaryFromDesignBaseY(h: i32, stroke_width: i32, y: glyphs.DesignBoundaryBaseY) PixelBoundary {
+fn pixelBoundaryFromDesignBaseY(h: i32, stroke_width: i32, y: design.BoundaryBaseY) PixelBoundary {
     // if y is large enough, we just always use the same floating point
     // multiplier for the position
     const large_enough_ratio: f32 = switch (y) {
