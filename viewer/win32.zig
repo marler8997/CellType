@@ -18,6 +18,10 @@ const global = struct {
     var font_weight: f32 = celltype.default_weight;
 };
 
+pub const panic = win32.messageBoxThenPanic(.{
+    .title = "CellType Viewer Panic",
+});
+
 pub export fn wWinMain(
     hinstance: win32.HINSTANCE,
     _: ?win32.HINSTANCE,
@@ -114,25 +118,6 @@ fn winmain() !void {
     win32.ExitProcess(0xffffffff);
 }
 
-threadlocal var thread_is_panicing = false;
-pub fn panic(
-    msg: []const u8,
-    error_return_trace: ?*std.builtin.StackTrace,
-    ret_addr: ?usize,
-) noreturn {
-    if (!thread_is_panicing) {
-        thread_is_panicing = true;
-        var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
-        const msg_z: [:0]const u8 = if (std.fmt.allocPrintZ(
-            arena.allocator(),
-            "{s}",
-            .{msg},
-        )) |msg_z| msg_z else |_| "failed allocate error message";
-        _ = win32.MessageBoxA(null, msg_z, "WinTerm Panic!", .{ .ICONASTERISK = 1 });
-    }
-    std.builtin.default_panic(msg, error_return_trace, ret_addr);
-}
-
 fn WndProc(
     hwnd: win32.HWND,
     uMsg: u32,
@@ -188,13 +173,3 @@ pub fn getClientSize(hwnd: win32.HWND) XY(i32) {
 pub fn oom(e: error{OutOfMemory}) noreturn {
     @panic(@errorName(e));
 }
-// pub fn fatal(comptime fmt: []const u8, args: anytype) noreturn {
-//     std.log.err(fmt, args);
-//     // TODO: detect if there is a console or not, only show message box
-//     //       if there is not a console
-//     var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
-//     const msg = std.fmt.allocPrintZ(arena.allocator(), fmt, args) catch @panic("Out of memory");
-//     const result = win32.MessageBoxA(null, msg.ptr, null, win32.MB_OK);
-//     std.log.info("MessageBox result is {}", .{result});
-//     std.posix.exit(0xff);
-// }
