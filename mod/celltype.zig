@@ -391,63 +391,141 @@ const PixelBoundary = struct {
             .stroke_bias = self.stroke_bias.flip(),
         };
     }
-    pub fn adjust(self: PixelBoundary, stroke_width: i32, stroke_offset: i8) PixelBoundary {
-        const direction: StrokeBias = switch (stroke_offset) {
-            -2 => return .{
-                .rounded = self.rounded - stroke_width,
-                .stroke_bias = self.stroke_bias,
-            },
-            -1 => .neg,
-            0 => return self,
-            1 => .pos,
-            2 => return .{
-                .rounded = self.rounded + stroke_width,
-                .stroke_bias = self.stroke_bias,
-            },
-            else => std.debug.panic("todo: implement stroke_offset {}", .{stroke_offset}),
+    pub fn adjust(self: PixelBoundary, stroke_width: i32, half_stroke_offset: i8) PixelBoundary {
+        if ((half_stroke_offset & 1) == 0) return .{
+            .rounded = self.rounded + stroke_width * @divExact(half_stroke_offset, 2),
+            .stroke_bias = self.stroke_bias,
         };
 
+        const base_mult: i32 = @divExact(if (half_stroke_offset > 0) (half_stroke_offset - 1) else (half_stroke_offset + 1), 2);
+        const base_step: i32 = self.rounded + base_mult * stroke_width;
+
+        const direction: StrokeBias = if (half_stroke_offset > 0) .pos else .neg;
         if (@as(u31, @intCast(stroke_width)) % 2 == 0) return .{
-            .rounded = self.rounded + switch (direction) {
+            .rounded = base_step + switch (direction) {
                 .neg => -@divExact(stroke_width, 2),
                 .pos => @divExact(stroke_width, 2),
             },
             .stroke_bias = self.stroke_bias,
         };
 
-        const step = @divTrunc(stroke_width + @as(i32, if (direction == self.stroke_bias) 1 else 0), 2);
+        const step: i32 = @divTrunc(stroke_width + @as(i32, if (direction == self.stroke_bias) 1 else 0), 2);
         return .{
-            .rounded = self.rounded + switch (direction) {
+            .rounded = base_step + switch (direction) {
                 .neg => -step,
                 .pos => step,
             },
             .stroke_bias = self.stroke_bias.flip(),
         };
     }
+    pub fn format(
+        self: @This(),
+        comptime fmt: []const u8,
+        options: std.fmt.FormatOptions,
+        writer: anytype,
+    ) @TypeOf(writer).Error!void {
+        _ = fmt;
+        _ = options;
+        try writer.print("{}({c} bias)", .{
+            self.rounded,
+            @as(u8, switch (self.stroke_bias) {
+                .neg => '-',
+                .pos => '+',
+            }),
+        });
+    }
 };
 
 test "adjusting boundaries" {
+    try std.testing.expectEqual(
+        @as(i32, 69),
+        (PixelBoundary{
+            .rounded = 100,
+            .stroke_bias = .pos,
+        }).adjust(21, -3).rounded,
+    );
+    try std.testing.expectEqual(
+        @as(i32, 70),
+        (PixelBoundary{
+            .rounded = 100,
+            .stroke_bias = .pos,
+        }).adjust(20, -3).rounded,
+    );
+
+    for (0..127) |stroke_offset| {
+        {
+            const b = (PixelBoundary{
+                .rounded = 0,
+                .stroke_bias = .pos,
+            }).adjust(1, @intCast(stroke_offset));
+            const expect: i32 = @intCast(@divTrunc(stroke_offset + 1, 2));
+            try std.testing.expectEqual(expect, b.rounded);
+        }
+        {
+            const b = (PixelBoundary{
+                .rounded = 0,
+                .stroke_bias = .neg,
+            }).adjust(1, -@as(i8, @intCast(stroke_offset)));
+            const expect: i32 = -@as(i32, @intCast(@divTrunc(stroke_offset + 1, 2)));
+            try std.testing.expectEqual(expect, b.rounded);
+        }
+    }
+    for (0..63) |i| {
+        {
+            const b = (PixelBoundary{
+                .rounded = 0,
+                .stroke_bias = .pos,
+            }).adjust(1, @as(i8, @intCast(i)) * 2);
+            try std.testing.expectEqual(@as(i32, @intCast(i)), b.rounded);
+        }
+        {
+            const b = (PixelBoundary{
+                .rounded = 0,
+                .stroke_bias = .neg,
+            }).adjust(1, -@as(i8, @intCast(i)) * 2);
+            try std.testing.expectEqual(-@as(i32, @intCast(i)), b.rounded);
+        }
+        {
+            const b = (PixelBoundary{
+                .rounded = 0,
+                .stroke_bias = .pos,
+            }).adjust(2, @as(i8, @intCast(i)) * 2);
+            try std.testing.expectEqual(@as(i32, @intCast(i * 2)), b.rounded);
+        }
+        {
+            const b = (PixelBoundary{
+                .rounded = 0,
+                .stroke_bias = .neg,
+            }).adjust(2, -@as(i8, @intCast(i)) * 2);
+            try std.testing.expectEqual(-@as(i32, @intCast(i * 2)), b.rounded);
+        }
+    }
+
     for (1..100) |size_usize| {
         const size: i32 = @intCast(size_usize);
         for (0..100) |stroke_width_usize| {
             const stroke_width: i32 = @intCast(stroke_width_usize);
-            inline for (std.meta.fields(glyphs.DesignBoundaryX)) |x_field| {
-                const x: glyphs.DesignBoundaryX = @enumFromInt(x_field.value);
-                const boundary = pixelBoundaryFromDesignX(size, stroke_width, x);
-                try std.testing.expectEqual(boundary, boundary.adjust(stroke_width, .@"0"));
-                try std.testing.expectEqual(boundary, boundary.adjust(stroke_width, .@"1").adjust(stroke_width, .@"-1"));
-                try std.testing.expectEqual(boundary, boundary.adjust(stroke_width, .@"-1").adjust(stroke_width, .@"1"));
-                try std.testing.expectEqual(boundary, boundary.adjust(stroke_width, .@"0.5").adjust(stroke_width, .@"-0.5"));
-                try std.testing.expectEqual(boundary, boundary.adjust(stroke_width, .@"-0.5").adjust(stroke_width, .@"0.5"));
+            inline for (std.meta.fields(glyphs.DesignBoundaryBaseX)) |x_field| {
+                const x: glyphs.DesignBoundaryBaseX = @enumFromInt(x_field.value);
+                const boundary = pixelBoundaryFromDesignBaseX(size, stroke_width, x);
+                for (0..10) |i_usize| {
+                    const i: i8 = @intCast(i_usize);
+                    const pos = boundary.adjust(stroke_width, i);
+                    try std.testing.expectEqual(boundary, pos.adjust(stroke_width, -i));
+                    try std.testing.expectEqual(boundary, boundary.adjust(stroke_width, -i).adjust(stroke_width, i));
+                    try std.testing.expectEqual(pos, pos.adjust(stroke_width, i).adjust(stroke_width, -i));
+                }
             }
-            inline for (std.meta.fields(glyphs.DesignBoundaryY)) |y_field| {
-                const y: glyphs.DesignBoundaryY = @enumFromInt(y_field.value);
-                const boundary = pixelBoundaryFromDesignY(size, stroke_width, y);
-                try std.testing.expectEqual(boundary, boundary.adjust(stroke_width, .@"0"));
-                try std.testing.expectEqual(boundary, boundary.adjust(stroke_width, .@"1").adjust(stroke_width, .@"-1"));
-                try std.testing.expectEqual(boundary, boundary.adjust(stroke_width, .@"-1").adjust(stroke_width, .@"1"));
-                try std.testing.expectEqual(boundary, boundary.adjust(stroke_width, .@"0.5").adjust(stroke_width, .@"-0.5"));
-                try std.testing.expectEqual(boundary, boundary.adjust(stroke_width, .@"-0.5").adjust(stroke_width, .@"0.5"));
+            inline for (std.meta.fields(glyphs.DesignBoundaryBaseY)) |y_field| {
+                const y: glyphs.DesignBoundaryBaseY = @enumFromInt(y_field.value);
+                const boundary = pixelBoundaryFromDesignBaseY(size, stroke_width, y);
+                for (0..10) |i_usize| {
+                    const i: i8 = @intCast(i_usize);
+                    const pos = boundary.adjust(stroke_width, i);
+                    try std.testing.expectEqual(boundary, pos.adjust(stroke_width, -i));
+                    try std.testing.expectEqual(boundary, boundary.adjust(stroke_width, -i).adjust(stroke_width, i));
+                    try std.testing.expectEqual(pos, pos.adjust(stroke_width, i).adjust(stroke_width, -i));
+                }
             }
         }
     }
