@@ -18,7 +18,7 @@ CellType is a new font technology that reimagines how digital fonts are defined 
 # Sample
 
 <p align="center">
-  <img src="https://github.com/user-attachments/assets/e53288ba-fd01-42e0-bb19-5144f8b60bd6" alt="Example" width="784" height="992" />
+  <img src="https://github.com/user-attachments/assets/0fc654c5-4e58-4211-8869-5ab652fb7457" alt="Example" width="751" height="833" />
 </p>
 
 ## Named Coordinate System
