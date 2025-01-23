@@ -20,6 +20,7 @@ pub fn build(b: *std.Build) void {
             .win32_manifest = b.path("viewer/win32.manifest"),
         });
         exe.root_module.addImport("celltype", celltype_mod);
+        exe.subsystem = .Windows;
 
         switch (target.result.os.tag) {
             .windows => if (b.lazyDependency("win32", .{})) |win32_dep| {

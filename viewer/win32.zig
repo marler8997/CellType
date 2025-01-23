@@ -22,28 +22,7 @@ pub const panic = win32.messageBoxThenPanic(.{
     .title = "CellType Viewer Panic",
 });
 
-pub export fn wWinMain(
-    hinstance: win32.HINSTANCE,
-    _: ?win32.HINSTANCE,
-    cmdline: [*:0]u16,
-    cmdshow: c_int,
-) c_int {
-    _ = hinstance;
-    _ = cmdline;
-    _ = cmdshow;
-    winmain() catch |err| {
-        // TODO: put this error information elsewhere, maybe a file, maybe
-        //       show it in the error messagebox
-        std.log.err("{s}", .{@errorName(err)});
-        if (@errorReturnTrace()) |trace| {
-            std.debug.dumpStackTrace(trace.*);
-        }
-        _ = win32.MessageBoxA(null, @errorName(err), "Med Error", .{ .ICONASTERISK = 1 });
-        return -1;
-    };
-    return 0;
-}
-fn winmain() !void {
+pub fn main() !void {
     const CLASS_NAME = win32.L("CellTypeViewer");
     {
         const wc = win32.WNDCLASSEXW{
