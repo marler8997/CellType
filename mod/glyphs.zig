@@ -37,6 +37,10 @@ pub const @"2" = [_]Op{
         .top = .{ .base = .uppercase_top, .half_stroke_adjust = -1 },
         .bottom = .{ .base = .baseline_stroke, .half_stroke_adjust = 1 },
     } } },
+    .{ .op = .{ .clip = .{
+        .count = 1,
+        .bottom = .{ .base = .uppercase_top_quarter },
+    } } },
     // top left
     .{ .op = .{
         .stroke_curve = .{
@@ -71,6 +75,8 @@ pub const @"2" = [_]Op{
     } },
     .{ .op = .{ .stroke_horz = .{ .y = .{ .base = .baseline_stroke } } } },
 };
+//pub const @"3" = [_]Op{};
+
 pub const H = [_]Op{
     .{ .op = .{ .clip = .{
         .left = .{ .base = .uppercase_left, .half_stroke_adjust = -1 },
