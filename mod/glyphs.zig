@@ -2,8 +2,6 @@ const design = @import("design.zig");
 
 const Op = design.Op;
 
-pub const todo = [_]Op{.{ .op = .todo }};
-
 pub const @"0" = O ++ [_]Op{
     .{ .op = .{ .clip = .{
         .count = 1,

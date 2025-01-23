@@ -8,14 +8,11 @@ const XY = @import("xy.zig").XY;
 
 const celltype = @import("celltype");
 
-const window_style_ex = win32.WINDOW_EX_STYLE{};
-const window_style = win32.WS_OVERLAPPEDWINDOW;
-
 const global = struct {
     var hwnd: win32.HWND = undefined;
-    var arena_instance = std.heap.ArenaAllocator.init(std.heap.page_allocator);
     var gdi_cache: gdi.ObjectCache = .{};
     var font_weight: f32 = celltype.default_weight;
+    var text: []const u8 = "HiNZ0123";
 };
 
 pub const panic = win32.messageBoxThenPanic(.{
@@ -23,6 +20,24 @@ pub const panic = win32.messageBoxThenPanic(.{
 });
 
 pub fn main() !void {
+    var arena_instance = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+    const arena = arena_instance.allocator();
+
+    {
+        const cmdline = try std.process.argsAlloc(arena);
+        // no need to free
+        var index: usize = 1;
+        while (index < cmdline.len) {
+            const arg = cmdline[index];
+            index += 1;
+            if (std.mem.eql(u8, arg, "--text")) {
+                if (index >= cmdline.len) @panic("--text requires an argument");
+                global.text = cmdline[index];
+                index += 1;
+            } else std.debug.panic("unknown cmdline option '{s}'", .{arg});
+        }
+    }
+
     const CLASS_NAME = win32.L("CellTypeViewer");
     {
         const wc = win32.WNDCLASSEXW{
@@ -43,10 +58,10 @@ pub fn main() !void {
     }
 
     global.hwnd = win32.CreateWindowExW(
-        window_style_ex,
+        .{},
         CLASS_NAME,
         win32.L("CellType Viewer"),
-        window_style,
+        win32.WS_OVERLAPPEDWINDOW,
         win32.CW_USEDEFAULT,
         win32.CW_USEDEFAULT,
         800,
@@ -125,7 +140,7 @@ fn WndProc(
             const dpi = win32.dpiFromHwnd(hwnd);
             const client_size = win32.getClientSize(hwnd);
             const hdc, const ps = win32.beginPaint(hwnd);
-            gdi.paint(hdc, dpi, client_size, global.font_weight, &global.gdi_cache);
+            gdi.paint(hdc, dpi, client_size, global.font_weight, global.text, &global.gdi_cache);
             win32.endPaint(hwnd, &ps);
             return 0;
         },

@@ -31,6 +31,9 @@ pub fn build(b: *std.Build) void {
         const install = b.addInstallArtifact(exe, .{});
         const run = b.addRunArtifact(exe);
         run.step.dependOn(&install.step);
+        if (b.args) |args| {
+            run.addArgs(args);
+        }
         b.step("viewer", "").dependOn(&run.step);
     }
 }

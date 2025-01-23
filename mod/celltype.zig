@@ -53,8 +53,9 @@ pub fn render(
         output_precleared: bool,
         // TODO: add option for vertical direction
     },
-) void {
-    const ops = getOps(grapheme_utf8);
+) error{Utf8Decode}!usize {
+    std.debug.assert(grapheme_utf8.len > 0);
+    const utf8_len, const ops = try getOps(grapheme_utf8);
 
     // NOTE: the ClipBoundaries are purely an optimization for the
     //       CPU renderer, they should not affect the output and should
@@ -86,14 +87,27 @@ pub fn render(
             );
         }
     }
+    return utf8_len;
 }
 
-fn getOps(grapheme_utf8: []const u8) []const design.Op {
-    if (grapheme_utf8.len == 1) return switch (grapheme_utf8[0]) {
-        inline else => |c| if (@hasDecl(glyphs, &[_]u8{c})) &@field(glyphs, &[_]u8{c}) else &glyphs.todo,
+fn getOps(grapheme_utf8: []const u8) error{Utf8Decode}!struct { usize, []const design.Op } {
+    std.debug.assert(grapheme_utf8.len > 0);
+    const utf8_len = std.unicode.utf8CodepointSequenceLength(grapheme_utf8[0]) catch
+        return error.Utf8Decode;
+    const codepoint = std.unicode.utf8Decode(grapheme_utf8[0..utf8_len]) catch |err| switch (err) {
+        error.Utf8ExpectedContinuation,
+        error.Utf8OverlongEncoding,
+        error.Utf8EncodesSurrogateHalf,
+        error.Utf8CodepointTooLarge,
+        => return error.Utf8Decode,
     };
-    return &glyphs.todo;
+    if (std.math.cast(u8, codepoint)) |codepoint_u8| switch (codepoint_u8) {
+        inline else => |c| if (@hasDecl(glyphs, &[_]u8{c})) return .{ utf8_len, &@field(glyphs, &[_]u8{c}) },
+    };
+    return .{ utf8_len, &todo };
 }
+
+const todo = [_]design.Op{.{ .op = .todo }};
 
 const ClipBoundaries = struct {
     row_start: usize,

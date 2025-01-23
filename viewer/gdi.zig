@@ -108,15 +108,12 @@ pub fn paint(
     dpi: u32,
     client_size: win32.SIZE,
     font_weight: f32,
+    graphemes: []const u8,
     cache: *ObjectCache,
 ) void {
     // NOTE: clearing the entire window first causes flickering
     //       see https://catch22.net/tuts/win32/flicker-free-drawing/
     //       TLDR; don't draw over the same pixel twice
-    const bg_brush = cache.getBrush(.bg);
-
-    const graphemes = [_][]const u8{ "H", "i", "N", "Z", "0", "1", "2", "3" };
-
     const sizes = [_]XY(u16){
         .{ .x = 1, .y = 12 },
         .{ .x = 2, .y = 16 },
@@ -160,11 +157,13 @@ pub fn paint(
     };
     var y: i32 = margin;
 
+    const bg_brush = cache.getBrush(.bg);
     win32.fillRect(hdc, .{ .left = 0, .top = 0, .right = client_size.cx, .bottom = y }, bg_brush);
     win32.fillRect(hdc, .{ .left = 0, .top = margin, .right = margin, .bottom = client_size.cy }, bg_brush);
     for (sizes) |size| {
         var x: i32 = margin;
-        for (graphemes) |grapheme| {
+        var grapheme_offset: usize = 0;
+        while (grapheme_offset < graphemes.len) {
             const config: celltype.Config = .{
                 .serif = true,
             };
@@ -173,7 +172,7 @@ pub fn paint(
                 //if (true) break :blk 1;
                 break :blk celltype.calcStrokeWidth(u16, size.x, size.y, font_weight);
             };
-            celltype.render(
+            grapheme_offset += celltype.render(
                 &config,
                 u16,
                 size.x,
@@ -181,9 +180,9 @@ pub fn paint(
                 stroke_width,
                 bmp.grayscale,
                 bmp_stride,
-                grapheme,
+                graphemes[grapheme_offset..],
                 .{ .output_precleared = false },
-            );
+            ) catch |err| std.debug.panic("render failed with {s}", .{@errorName(err)});
             if (0 == win32.BitBlt(
                 hdc,
                 x,
