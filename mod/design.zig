@@ -13,6 +13,7 @@ pub const BoundaryBaseY = enum {
     _1_slanty_bottom,
     lowercase_top,
     uppercase_center,
+    uppercase_bottom_quarter,
     /// center of a stroke where the bottom touches the baseline
     baseline_stroke,
 };

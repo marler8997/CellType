@@ -115,7 +115,7 @@ pub fn paint(
     //       TLDR; don't draw over the same pixel twice
     const bg_brush = cache.getBrush(.bg);
 
-    const graphemes = [_][]const u8{ "H", "i", "1", "N", "Z", "O", "2" };
+    const graphemes = [_][]const u8{ "H", "i", "1", "N", "Z", "O", "2", "3" };
 
     const sizes = [_]XY(u16){
         .{ .x = 1, .y = 12 },

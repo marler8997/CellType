@@ -75,7 +75,69 @@ pub const @"2" = [_]Op{
     } },
     .{ .op = .{ .stroke_horz = .{ .y = .{ .base = .baseline_stroke } } } },
 };
-//pub const @"3" = [_]Op{};
+
+pub const @"3" = [_]Op{
+    .{ .op = .{ .clip = .{
+        .count = 1,
+        .bottom = .{ .base = .uppercase_top_quarter },
+    } } },
+    // top left
+    .{ .op = .{
+        .stroke_curve = .{
+            .start = .{ .x = .{ .base = .uppercase_left }, .y = .{ .base = .uppercase_top_quarter } },
+            .control = .{ .x = .{ .base = .uppercase_left }, .y = .{ .base = .uppercase_top } },
+            .end = .{ .x = .{ .base = .center }, .y = .{ .base = .uppercase_top } },
+        },
+    } },
+    // top right
+    .{ .op = .{
+        .stroke_curve = .{
+            .start = .{ .x = .{ .base = .center }, .y = .{ .base = .uppercase_top } },
+            .control = .{ .x = .{ .base = .uppercase_right }, .y = .{ .base = .uppercase_top } },
+            .end = .{ .x = .{ .base = .uppercase_right }, .y = .{ .base = .uppercase_top_quarter } },
+        },
+    } },
+    .{ .op = .{ .clip = .{
+        .count = 2,
+        .left = .{ .base = .center, .half_stroke_adjust = -1 },
+    } } },
+    // upper middle right
+    .{ .op = .{
+        .stroke_curve = .{
+            .start = .{ .x = .{ .base = .uppercase_right }, .y = .{ .base = .uppercase_top_quarter } },
+            .control = .{ .x = .{ .base = .uppercase_right }, .y = .{ .base = .uppercase_center } },
+            .end = .{ .x = .{ .base = .center, .half_stroke_adjust = -1 }, .y = .{ .base = .uppercase_center } },
+        },
+    } },
+    // lower middle right
+    .{ .op = .{
+        .stroke_curve = .{
+            .start = .{ .x = .{ .base = .center, .half_stroke_adjust = -1 }, .y = .{ .base = .uppercase_center } },
+            .control = .{ .x = .{ .base = .uppercase_right }, .y = .{ .base = .uppercase_center } },
+            .end = .{ .x = .{ .base = .uppercase_right }, .y = .{ .base = .uppercase_bottom_quarter } },
+        },
+    } },
+    // bottom right
+    .{ .op = .{
+        .stroke_curve = .{
+            .start = .{ .x = .{ .base = .uppercase_right }, .y = .{ .base = .uppercase_bottom_quarter } },
+            .control = .{ .x = .{ .base = .uppercase_right }, .y = .{ .base = .baseline_stroke } },
+            .end = .{ .x = .{ .base = .center }, .y = .{ .base = .baseline_stroke } },
+        },
+    } },
+    .{ .op = .{ .clip = .{
+        .count = 1,
+        .top = .{ .base = .uppercase_bottom_quarter },
+    } } },
+    // bottom left
+    .{ .op = .{
+        .stroke_curve = .{
+            .start = .{ .x = .{ .base = .center }, .y = .{ .base = .baseline_stroke } },
+            .control = .{ .x = .{ .base = .uppercase_left }, .y = .{ .base = .baseline_stroke } },
+            .end = .{ .x = .{ .base = .uppercase_left }, .y = .{ .base = .uppercase_bottom_quarter } },
+        },
+    } },
+};
 
 pub const H = [_]Op{
     .{ .op = .{ .clip = .{
