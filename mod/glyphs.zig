@@ -4,6 +4,18 @@ const Op = design.Op;
 
 pub const todo = [_]Op{.{ .op = .todo }};
 
+pub const @"0" = O ++ [_]Op{
+    .{ .op = .{ .clip = .{
+        .count = 1,
+        .left = .{ .base = .uppercase_left, .half_stroke_adjust = 1 },
+        .right = .{ .base = .uppercase_right, .half_stroke_adjust = -1 },
+    } } },
+    // TODO: mark this stroke as "thinner", or maybe, we could make this a "half stroke" width?
+    .{ .op = .{ .stroke_diag = .{
+        .a = .{ .x = .{ .base = .uppercase_left }, .y = .{ .base = .uppercase_top, .between = .{ .base = .baseline_stroke, .ratio = 0.70 } } },
+        .b = .{ .x = .{ .base = .uppercase_right }, .y = .{ .base = .uppercase_top, .between = .{ .base = .baseline_stroke, .ratio = 0.30 } } },
+    } } },
+};
 pub const @"1" = [_]Op{
     .{ .op = .{ .clip = .{
         .top = .{ .base = .uppercase_top, .half_stroke_adjust = -1 },
