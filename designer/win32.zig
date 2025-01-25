@@ -6,6 +6,7 @@ const win32 = @import("win32").everything;
 const app = @import("app.zig");
 
 const gdi = @import("gdi.zig");
+const theme = @import("theme.zig");
 const XY = @import("xy.zig").XY;
 
 const global = struct {
@@ -56,7 +57,9 @@ pub fn main() !void {
         while (index < cmdline.len) {
             const arg = cmdline[index];
             index += 1;
-            if (std.mem.eql(u8, arg, "--text")) {
+            if (std.mem.eql(u8, arg, "--design")) {
+                app.exec(.design_mode);
+            } else if (std.mem.eql(u8, arg, "--text")) {
                 if (index >= cmdline.len) @panic("--text requires an argument");
                 const text = cmdline[index];
                 index += 1;
@@ -171,6 +174,16 @@ fn WndProc(
     lparam: win32.LPARAM,
 ) callconv(std.os.windows.WINAPI) win32.LRESULT {
     switch (msg) {
+        win32.WM_LBUTTONDOWN => {
+            const p = win32.pointFromLparam(lparam);
+            app.mouseButton(.left, .down, .{ .x = @intCast(p.x), .y = @intCast(p.y) });
+            return 0;
+        },
+        win32.WM_LBUTTONUP => {
+            const p = win32.pointFromLparam(lparam);
+            app.mouseButton(.left, .up, .{ .x = p.x, .y = p.y });
+            return 0;
+        },
         win32.WM_SYSKEYDOWN => {
             input_log.info("WM_SYSKEYDOWN {}", .{wparam});
             return win32.DefWindowProcW(hwnd, msg, wparam, lparam);
@@ -181,6 +194,11 @@ fn WndProc(
                 @intFromEnum(win32.VK_BACK) => app.backspace(),
                 @intFromEnum(win32.VK_DOWN) => app.arrowKey(.down),
                 @intFromEnum(win32.VK_UP) => app.arrowKey(.up),
+                'A'...'Z' => |key| {
+                    if (win32.GetKeyState(@intFromEnum(win32.VK_CONTROL)) < 0) {
+                        app.ctrlKey(@intCast(key + ('a' - 'A')));
+                    }
+                },
                 else => {},
             }
             return 0;
@@ -251,13 +269,27 @@ fn WndProc(
     }
 }
 
+pub const Rect = win32.RECT;
+
 pub const RenderTarget = struct {
     hdc: win32.HDC,
 
-    pub fn fillRect(self: RenderTarget, color: enum { bg }, rect: win32.RECT) void {
-        win32.fillRect(self.hdc, rect, switch (color) {
-            .bg => global.gdi_cache.getBrush(.bg),
-        });
+    pub fn fillRect(self: RenderTarget, color: theme.Color, rect: win32.RECT) void {
+        win32.fillRect(self.hdc, rect, global.gdi_cache.getBrush(color));
+    }
+    // TODO: remove this method when our text rendering is ready to do the UI
+    pub fn drawText(self: RenderTarget, text_size: XY(u16), pos: XY(i32), text: []const u8) void {
+        _ = win32.SetBkColor(self.hdc, gdi.colorrefFromRgb(theme.Color.bg.getRgb8()));
+        _ = win32.SetTextColor(self.hdc, gdi.colorrefFromRgb(theme.Color.fg.getRgb8()));
+
+        for (text, 0..) |c, i| {
+            const x = pos.x + @as(i32, @intCast(text_size.x * i));
+            const size = win32.getTextExtentA(self.hdc, &[_]u8{c});
+            // TODO: use our own text rendering when it's ready
+            win32.textOutA(self.hdc, x, pos.y, &[_]u8{c});
+            _ = size;
+            //win32.fillRect(
+        }
     }
 
     pub const Bitmap = struct {

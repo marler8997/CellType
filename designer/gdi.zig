@@ -4,16 +4,10 @@ const win32 = @import("win32").everything;
 const celltype = @import("celltype");
 
 const Rgb8 = @import("Rgb8.zig");
+const theme = @import("theme.zig");
 const XY = @import("xy.zig").XY;
 
-const Brush = enum {
-    bg,
-};
-
-const theme = struct {
-    const bg: Rgb8 = .{ .r = 40, .g = 40, .b = 50 };
-    const fg: Rgb8 = .{ .r = 255, .g = 255, .b = 255 };
-};
+const color_count = std.meta.fields(theme.Color).len;
 
 const Bitmap = struct {
     size: XY(u16),
@@ -22,20 +16,15 @@ const Bitmap = struct {
 };
 
 pub const ObjectCache = struct {
-    brush_bg: ?win32.HBRUSH = null,
+    brushes: [color_count]?win32.HBRUSH = [1]?win32.HBRUSH{null} ** color_count,
     bmp: ?Bitmap = null,
-    fn getBrushRef(self: *ObjectCache, brush: Brush) *?win32.HBRUSH {
-        return switch (brush) {
-            .bg => &self.brush_bg,
-        };
+    fn getBrushRef(self: *ObjectCache, color: theme.Color) *?win32.HBRUSH {
+        return &self.brushes[@intFromEnum(color)];
     }
-    pub fn getBrush(self: *ObjectCache, brush: Brush) win32.HBRUSH {
-        const brush_ref = self.getBrushRef(brush);
+    pub fn getBrush(self: *ObjectCache, color: theme.Color) win32.HBRUSH {
+        const brush_ref = self.getBrushRef(color);
         if (brush_ref.* == null) {
-            const rgb = switch (brush) {
-                .bg => theme.bg,
-            };
-            brush_ref.* = win32.CreateSolidBrush(colorrefFromRgb(rgb)) orelse win32.panicWin32(
+            brush_ref.* = win32.CreateSolidBrush(colorrefFromRgb(color.getRgb8())) orelse win32.panicWin32(
                 "CreateSolidBrush",
                 win32.GetLastError(),
             );
@@ -99,6 +88,6 @@ pub const ObjectCache = struct {
     }
 };
 
-fn colorrefFromRgb(rgb: Rgb8) u32 {
+pub fn colorrefFromRgb(rgb: Rgb8) u32 {
     return (@as(u32, rgb.r) << 0) | (@as(u32, rgb.g) << 8) | (@as(u32, rgb.b) << 16);
 }

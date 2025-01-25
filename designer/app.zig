@@ -2,11 +2,22 @@ const std = @import("std");
 const root = @import("root");
 const celltype = @import("celltype");
 
+const DesignMode = @import("DesignMode.zig");
 const XY = @import("xy.zig").XY;
 
 pub const TextArray = std.BoundedArray(u8, 30);
 
+pub const Mode = enum {
+    view,
+    design,
+};
+pub const MouseButtonKind = enum { left };
+pub const MouseButtonState = enum { up, down };
+
 pub const global = struct {
+    var mode: Mode = .view;
+    var design_mode: DesignMode = .{};
+
     var font_weight: f32 = celltype.default_weight;
     pub var text: TextArray = TextArray.fromSlice("HiNZ0123") catch unreachable;
 };
@@ -33,6 +44,35 @@ pub fn arrowKey(arrow_key: enum { down, up }) void {
     }
 }
 
+pub const Command = union(enum) {
+    view_mode,
+    design_mode,
+};
+pub fn exec(command: Command) void {
+    switch (command) {
+        .view_mode => {
+            if (global.mode != .view) {
+                global.mode = .view;
+                root.invalidate();
+            }
+        },
+        .design_mode => {
+            if (global.mode != .design) {
+                global.mode = .design;
+                root.invalidate();
+            }
+        },
+    }
+}
+
+pub fn ctrlKey(key: u8) void {
+    switch (key) {
+        'd' => exec(.design_mode),
+        'v' => exec(.view_mode),
+        else => {},
+    }
+}
+
 pub fn inputUtf8(utf8: []const u8) void {
     global.text.appendSlice(utf8) catch {
         // todo show error message in UI
@@ -42,7 +82,46 @@ pub fn inputUtf8(utf8: []const u8) void {
     root.invalidate();
 }
 
+pub const Rect = struct {
+    left: i32,
+    top: i32,
+    right: i32,
+    bottom: i32,
+    pub fn initSized(left: i32, top: i32, width: i32, height: i32) Rect {
+        return .{
+            .left = left,
+            .top = top,
+            .right = left + width,
+            .bottom = top + height,
+        };
+    }
+    pub fn topLeft(self: Rect) XY(i32) {
+        return .{ .x = self.left, .y = self.top };
+    }
+    pub fn containsPoint(self: Rect, p: XY(i32)) bool {
+        return p.x >= self.left and p.x < self.right and p.y >= self.top and p.y < self.bottom;
+    }
+};
+
+pub fn mouseButton(kind: MouseButtonKind, state: MouseButtonState, pos: XY(i32)) void {
+    switch (global.mode) {
+        .view => {},
+        .design => global.design_mode.mouseButton(kind, state, pos),
+    }
+}
+
+pub fn drawText(target: root.RenderTarget, text_size: XY(u16), pos: XY(i32), text: []const u8) void {
+    // TODO: don't defer to the render target when we have enough characters to render text ourselves
+    target.drawText(text_size, pos, text);
+}
+
 pub fn render(target: root.RenderTarget, scale: f32, render_size: XY(i32)) void {
+    switch (global.mode) {
+        .view => renderViewMode(target, scale, render_size),
+        .design => global.design_mode.render(target, scale, render_size),
+    }
+}
+fn renderViewMode(target: root.RenderTarget, scale: f32, render_size: XY(i32)) void {
     // NOTE: the win32 platform is currently using GDI which means
     //       we need to avoid overdraw (drawing the same pixel twice)
     //       see https://catch22.net/tuts/win32/flicker-free-drawing/
