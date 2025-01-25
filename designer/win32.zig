@@ -233,7 +233,11 @@ fn WndProc(
             const dpi = win32.dpiFromHwnd(hwnd);
             const client_size = win32.getClientSize(hwnd);
             const hdc, const ps = win32.beginPaint(hwnd);
-            gdi.paint(hdc, dpi, client_size, app.global.font_weight, app.global.text.constSlice(), &global.gdi_cache);
+            app.render(
+                .{ .hdc = hdc },
+                win32.scaleFromDpi(f32, dpi),
+                .{ .x = client_size.cx, .y = client_size.cy },
+            );
             win32.endPaint(hwnd, &ps);
             return 0;
         },
@@ -246,6 +250,57 @@ fn WndProc(
         else => return win32.DefWindowProcW(hwnd, msg, wparam, lparam),
     }
 }
+
+pub const RenderTarget = struct {
+    hdc: win32.HDC,
+
+    pub fn fillRect(self: RenderTarget, color: enum { bg }, rect: win32.RECT) void {
+        win32.fillRect(self.hdc, rect, switch (color) {
+            .bg => global.gdi_cache.getBrush(.bg),
+        });
+    }
+
+    pub const Bitmap = struct {
+        // public fields
+        grayscale: [*]u8,
+        stride: usize,
+
+        mem_hdc: win32.HDC,
+        old_bmp: ?win32.HGDIOBJ,
+
+        pub fn renderDone(self: *Bitmap) void {
+            _ = win32.SelectObject(self.mem_hdc, self.old_bmp);
+            win32.deleteDc(self.mem_hdc);
+            self.* = undefined;
+        }
+    };
+    pub fn getBitmap(self: RenderTarget, size: XY(u16)) Bitmap {
+        const bmp = global.gdi_cache.getBitmap(self.hdc, size);
+        const mem_hdc = win32.CreateCompatibleDC(self.hdc);
+        errdefer win32.deleteDc(self.mem_hdc);
+        const old_bmp = win32.SelectObject(mem_hdc, @ptrCast(bmp.section));
+        errdefer _ = win32.SelectObject(mem_hdc, old_bmp);
+        return .{
+            .grayscale = bmp.grayscale,
+            .stride = (bmp.size.x + 3) & ~@as(u32, 3),
+            .mem_hdc = mem_hdc,
+            .old_bmp = old_bmp,
+        };
+    }
+    pub fn renderBitmap(self: RenderTarget, bmp: Bitmap, pos: XY(i32), size: XY(i32)) void {
+        if (0 == win32.BitBlt(
+            self.hdc,
+            pos.x,
+            pos.y,
+            size.x,
+            size.y,
+            bmp.mem_hdc,
+            0,
+            0,
+            win32.SRCCOPY,
+        )) win32.panicWin32("BitBlt", win32.GetLastError());
+    }
+};
 
 pub fn oom(e: error{OutOfMemory}) noreturn {
     @panic(@errorName(e));
