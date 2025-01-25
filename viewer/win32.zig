@@ -8,11 +8,14 @@ const XY = @import("xy.zig").XY;
 
 const celltype = @import("celltype");
 
+const TextArray = std.BoundedArray(u8, 30);
+
 const global = struct {
     var hwnd: win32.HWND = undefined;
     var gdi_cache: gdi.ObjectCache = .{};
     var font_weight: f32 = celltype.default_weight;
-    var text: []const u8 = "HiNZ0123";
+    var text: TextArray = TextArray.fromSlice("HiNZ0123") catch unreachable;
+    var wm_char_high_surrogate: u16 = 0;
 };
 
 pub const panic = win32.messageBoxThenPanic(.{
@@ -32,8 +35,12 @@ pub fn main() !void {
             index += 1;
             if (std.mem.eql(u8, arg, "--text")) {
                 if (index >= cmdline.len) @panic("--text requires an argument");
-                global.text = cmdline[index];
+                const text = cmdline[index];
                 index += 1;
+                global.text = TextArray.fromSlice(text) catch std.debug.panic(
+                    "--text ({} bytes) too long (max {})",
+                    .{ text.len, global.text.capacity() },
+                );
             } else std.debug.panic("unknown cmdline option '{s}'", .{arg});
         }
     }
@@ -112,6 +119,10 @@ pub fn main() !void {
     win32.ExitProcess(0xffffffff);
 }
 
+fn isUtf8Extension(c: u8) bool {
+    return (c & 0b1100_0000) == 0b1000_0000;
+}
+
 fn WndProc(
     hwnd: win32.HWND,
     uMsg: u32,
@@ -132,6 +143,47 @@ fn WndProc(
                 }
             }
         },
+        win32.WM_CHAR => {
+            const chars: [2]u16 = blk: {
+                const chars = [2]u16{ global.wm_char_high_surrogate, @truncate(wparam) };
+                if (std.unicode.utf16IsHighSurrogate(chars[1])) {
+                    global.wm_char_high_surrogate = chars[1];
+                    return 0;
+                }
+                global.wm_char_high_surrogate = 0;
+                break :blk chars;
+            };
+            const codepoint: u21 = blk: {
+                if (std.unicode.utf16IsHighSurrogate(chars[0])) {
+                    if (std.unicode.utf16DecodeSurrogatePair(&chars)) |c| break :blk c else |e| switch (e) {
+                        error.ExpectedSecondSurrogateHalf => {},
+                    }
+                }
+                break :blk chars[1];
+            };
+            if (codepoint == 8) {
+                const len_before = global.text.len;
+                while (global.text.len > 0) {
+                    global.text.len -= 1;
+                    if (!isUtf8Extension(global.text.buffer[global.text.len])) break;
+                }
+                if (global.text.len != len_before)
+                    win32.invalidateHwnd(hwnd);
+            } else {
+                var utf8_buf: [7]u8 = undefined;
+                const len = std.unicode.utf8Encode(codepoint, &utf8_buf) catch |e| std.debug.panic(
+                    "utf8Encode {} failed with {s}",
+                    .{ codepoint, @errorName(e) },
+                );
+                global.text.appendSlice(utf8_buf[0..len]) catch {
+                    // todo show error message in UI
+                    std.log.err("too many characters", .{});
+                    _ = win32.MessageBeep(@bitCast(win32.MB_ICONWARNING));
+                };
+                win32.invalidateHwnd(hwnd);
+                return 0;
+            }
+        },
         win32.WM_CLOSE, win32.WM_DESTROY => {
             win32.PostQuitMessage(0);
             return 0;
@@ -140,7 +192,7 @@ fn WndProc(
             const dpi = win32.dpiFromHwnd(hwnd);
             const client_size = win32.getClientSize(hwnd);
             const hdc, const ps = win32.beginPaint(hwnd);
-            gdi.paint(hdc, dpi, client_size, global.font_weight, global.text, &global.gdi_cache);
+            gdi.paint(hdc, dpi, client_size, global.font_weight, global.text.constSlice(), &global.gdi_cache);
             win32.endPaint(hwnd, &ps);
             return 0;
         },
