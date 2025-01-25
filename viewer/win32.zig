@@ -167,11 +167,15 @@ fn isUtf8Extension(c: u8) bool {
 
 fn WndProc(
     hwnd: win32.HWND,
-    uMsg: u32,
+    msg: u32,
     wparam: win32.WPARAM,
     lparam: win32.LPARAM,
 ) callconv(std.os.windows.WINAPI) win32.LRESULT {
-    switch (uMsg) {
+    switch (msg) {
+        win32.WM_SYSKEYDOWN => {
+            input_log.info("WM_SYSKEYDOWN {}", .{wparam});
+            return win32.DefWindowProcW(hwnd, msg, wparam, lparam);
+        },
         win32.WM_KEYDOWN => {
             input_log.info("WM_KEYDOWN {}", .{wparam});
 
@@ -187,6 +191,10 @@ fn WndProc(
                 }
             }
             return 0;
+        },
+        win32.WM_SYSCHAR => {
+            input_log.info("WM_SYSCHAR {}", .{wparam});
+            return win32.DefWindowProcW(hwnd, msg, wparam, lparam);
         },
         win32.WM_CHAR => {
             const chars: [2]u16 = blk: {
@@ -227,6 +235,7 @@ fn WndProc(
                     "WM_CHAR [{},{}] codepoint={} utf8='{s}'",
                     .{ chars[0], chars[1], codepoint, utf8_buf[0..len] },
                 );
+
                 global.text.appendSlice(utf8_buf[0..len]) catch {
                     // todo show error message in UI
                     std.log.err("too many characters", .{});
@@ -254,7 +263,7 @@ fn WndProc(
             win32.invalidateHwnd(hwnd);
             return 0;
         },
-        else => return win32.DefWindowProcW(hwnd, uMsg, wparam, lparam),
+        else => return win32.DefWindowProcW(hwnd, msg, wparam, lparam),
     }
 }
 
