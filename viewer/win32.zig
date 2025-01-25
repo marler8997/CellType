@@ -43,6 +43,9 @@ pub fn main() !void {
     var arena_instance = std.heap.ArenaAllocator.init(std.heap.page_allocator);
     const arena = arena_instance.allocator();
 
+    var window_left: i32 = win32.CW_USEDEFAULT;
+    var window_size: XY(i32) = .{ .x = win32.CW_USEDEFAULT, .y = win32.CW_USEDEFAULT };
+
     {
         const cmdline = try std.process.argsAlloc(arena);
         // no need to free
@@ -58,6 +61,27 @@ pub fn main() !void {
                     "--text ({} bytes) too long (max {})",
                     .{ text.len, global.text.capacity() },
                 );
+            } else if (std.mem.eql(u8, arg, "--left")) {
+                if (index >= cmdline.len) @panic("--left requires an argument");
+                const str = cmdline[index];
+                index += 1;
+                window_left = std.fmt.parseInt(i32, str, 10) catch std.debug.panic(
+                    "--left argument '{s}' is not a number",
+                    .{str},
+                );
+            } else if (std.mem.eql(u8, arg, "--size")) {
+                if (index >= cmdline.len) @panic("--size requires an argument (i.e. 800x1000)");
+                const str = cmdline[index];
+                index += 1;
+                const first_end = std.mem.indexOfScalar(u8, str, 'x') orelse str.len;
+                window_size.x = std.fmt.parseInt(u31, str[0..first_end], 10) catch std.debug.panic(
+                    "--size argument '{s}' invalid",
+                    .{str},
+                );
+                window_size.y = if (first_end < str.len) std.fmt.parseInt(u31, str[first_end + 1 ..], 10) catch std.debug.panic(
+                    "--size argument '{s}' invalid",
+                    .{str},
+                ) else window_size.x;
             } else std.debug.panic("unknown cmdline option '{s}'", .{arg});
         }
     }
@@ -86,10 +110,11 @@ pub fn main() !void {
         CLASS_NAME,
         win32.L("CellType Viewer"),
         win32.WS_OVERLAPPEDWINDOW,
-        win32.CW_USEDEFAULT,
-        win32.CW_USEDEFAULT,
-        800,
-        1000,
+        // NOTE: can't mix CW_USEDEFAULT and non-default sizes
+        window_left,
+        if (window_left == win32.CW_USEDEFAULT) win32.CW_USEDEFAULT else 0,
+        window_size.x,
+        window_size.y,
         null, // Parent window
         null, // Menu
         win32.GetModuleHandleW(null), // Instance handle
