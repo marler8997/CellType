@@ -18,11 +18,28 @@ const global = struct {
     var wm_char_high_surrogate: u16 = 0;
 };
 
+pub const std_options: std.Options = .{
+    .log_level = .info,
+    .logFn = log,
+};
+const input_log = std.log.scoped(.input);
+fn log(
+    comptime level: std.log.Level,
+    comptime scope: @TypeOf(.enum_literal),
+    comptime fmt: []const u8,
+    args: anytype,
+) void {
+    // if (scope == .input) return;
+    std.log.defaultLog(level, scope, fmt, args);
+}
+
 pub const panic = win32.messageBoxThenPanic(.{
     .title = "CellType Viewer Panic",
 });
 
 pub fn main() !void {
+    _ = win32.AttachConsole(win32.ATTACH_PARENT_PROCESS);
+
     var arena_instance = std.heap.ArenaAllocator.init(std.heap.page_allocator);
     const arena = arena_instance.allocator();
 
@@ -131,6 +148,8 @@ fn WndProc(
 ) callconv(std.os.windows.WINAPI) win32.LRESULT {
     switch (uMsg) {
         win32.WM_KEYDOWN => {
+            input_log.info("WM_KEYDOWN {}", .{wparam});
+
             {
                 const new_weight = @max(0.01, switch (wparam) {
                     @intFromEnum(win32.VK_DOWN) => global.font_weight - 0.01,
@@ -142,11 +161,14 @@ fn WndProc(
                     win32.invalidateHwnd(hwnd);
                 }
             }
+            return 0;
         },
         win32.WM_CHAR => {
             const chars: [2]u16 = blk: {
                 const chars = [2]u16{ global.wm_char_high_surrogate, @truncate(wparam) };
+                std.debug.assert(chars[1] == wparam);
                 if (std.unicode.utf16IsHighSurrogate(chars[1])) {
+                    input_log.info("WM_CHAR [{},{}] high surrogate", .{ chars[0], chars[1] });
                     global.wm_char_high_surrogate = chars[1];
                     return 0;
                 }
@@ -162,6 +184,7 @@ fn WndProc(
                 break :blk chars[1];
             };
             if (codepoint == 8) {
+                input_log.info("WM_CHAR [{},{}] backspace", .{ chars[0], chars[1] });
                 const len_before = global.text.len;
                 while (global.text.len > 0) {
                     global.text.len -= 1;
@@ -175,14 +198,18 @@ fn WndProc(
                     "utf8Encode {} failed with {s}",
                     .{ codepoint, @errorName(e) },
                 );
+                input_log.info(
+                    "WM_CHAR [{},{}] codepoint={} utf8='{s}'",
+                    .{ chars[0], chars[1], codepoint, utf8_buf[0..len] },
+                );
                 global.text.appendSlice(utf8_buf[0..len]) catch {
                     // todo show error message in UI
                     std.log.err("too many characters", .{});
                     _ = win32.MessageBeep(@bitCast(win32.MB_ICONWARNING));
                 };
                 win32.invalidateHwnd(hwnd);
-                return 0;
             }
+            return 0;
         },
         win32.WM_CLOSE, win32.WM_DESTROY => {
             win32.PostQuitMessage(0);
@@ -200,10 +227,10 @@ fn WndProc(
             // since we "stretch" the image accross the full window, we
             // always invalidate the full client area on each window resize
             win32.invalidateHwnd(hwnd);
+            return 0;
         },
-        else => {},
+        else => return win32.DefWindowProcW(hwnd, uMsg, wparam, lparam),
     }
-    return win32.DefWindowProcW(hwnd, uMsg, wparam, lparam);
 }
 
 pub fn oom(e: error{OutOfMemory}) noreturn {
