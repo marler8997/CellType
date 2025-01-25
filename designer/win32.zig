@@ -3,18 +3,14 @@ const std = @import("std");
 
 const win32 = @import("win32").everything;
 
+const app = @import("app.zig");
+
 const gdi = @import("gdi.zig");
 const XY = @import("xy.zig").XY;
-
-const celltype = @import("celltype");
-
-const TextArray = std.BoundedArray(u8, 30);
 
 const global = struct {
     var hwnd: win32.HWND = undefined;
     var gdi_cache: gdi.ObjectCache = .{};
-    var font_weight: f32 = celltype.default_weight;
-    var text: TextArray = TextArray.fromSlice("HiNZ0123") catch unreachable;
     var wm_char_high_surrogate: u16 = 0;
 };
 
@@ -37,6 +33,13 @@ pub const panic = win32.messageBoxThenPanic(.{
     .title = "CellType Designer Panic",
 });
 
+pub fn invalidate() void {
+    win32.invalidateHwnd(global.hwnd);
+}
+pub fn beep() void {
+    _ = win32.MessageBeep(@bitCast(win32.MB_ICONWARNING));
+}
+
 pub fn main() !void {
     _ = win32.AttachConsole(win32.ATTACH_PARENT_PROCESS);
 
@@ -57,9 +60,9 @@ pub fn main() !void {
                 if (index >= cmdline.len) @panic("--text requires an argument");
                 const text = cmdline[index];
                 index += 1;
-                global.text = TextArray.fromSlice(text) catch std.debug.panic(
+                app.global.text = app.TextArray.fromSlice(text) catch std.debug.panic(
                     "--text ({} bytes) too long (max {})",
-                    .{ text.len, global.text.capacity() },
+                    .{ text.len, app.global.text.capacity() },
                 );
             } else if (std.mem.eql(u8, arg, "--left")) {
                 if (index >= cmdline.len) @panic("--left requires an argument");
@@ -161,10 +164,6 @@ pub fn main() !void {
     win32.ExitProcess(0xffffffff);
 }
 
-fn isUtf8Extension(c: u8) bool {
-    return (c & 0b1100_0000) == 0b1000_0000;
-}
-
 fn WndProc(
     hwnd: win32.HWND,
     msg: u32,
@@ -178,17 +177,11 @@ fn WndProc(
         },
         win32.WM_KEYDOWN => {
             input_log.info("WM_KEYDOWN {}", .{wparam});
-
-            {
-                const new_weight = @max(0.01, switch (wparam) {
-                    @intFromEnum(win32.VK_DOWN) => global.font_weight - 0.01,
-                    @intFromEnum(win32.VK_UP) => global.font_weight + 0.01,
-                    else => global.font_weight,
-                });
-                if (new_weight != global.font_weight) {
-                    global.font_weight = new_weight;
-                    win32.invalidateHwnd(hwnd);
-                }
+            switch (wparam) {
+                @intFromEnum(win32.VK_BACK) => app.backspace(),
+                @intFromEnum(win32.VK_DOWN) => app.arrowKey(.down),
+                @intFromEnum(win32.VK_UP) => app.arrowKey(.up),
+                else => {},
             }
             return 0;
         },
@@ -216,32 +209,19 @@ fn WndProc(
                 }
                 break :blk chars[1];
             };
-            if (codepoint == 8) {
-                input_log.info("WM_CHAR [{},{}] backspace", .{ chars[0], chars[1] });
-                const len_before = global.text.len;
-                while (global.text.len > 0) {
-                    global.text.len -= 1;
-                    if (!isUtf8Extension(global.text.buffer[global.text.len])) break;
-                }
-                if (global.text.len != len_before)
-                    win32.invalidateHwnd(hwnd);
-            } else {
-                var utf8_buf: [7]u8 = undefined;
-                const len = std.unicode.utf8Encode(codepoint, &utf8_buf) catch |e| std.debug.panic(
-                    "utf8Encode {} failed with {s}",
-                    .{ codepoint, @errorName(e) },
-                );
-                input_log.info(
-                    "WM_CHAR [{},{}] codepoint={} utf8='{s}'",
-                    .{ chars[0], chars[1], codepoint, utf8_buf[0..len] },
-                );
-
-                global.text.appendSlice(utf8_buf[0..len]) catch {
-                    // todo show error message in UI
-                    std.log.err("too many characters", .{});
-                    _ = win32.MessageBeep(@bitCast(win32.MB_ICONWARNING));
-                };
-                win32.invalidateHwnd(hwnd);
+            var utf8_buf: [7]u8 = undefined;
+            const len = std.unicode.utf8Encode(codepoint, &utf8_buf) catch |e| std.debug.panic(
+                "utf8Encode {} failed with {s}",
+                .{ codepoint, @errorName(e) },
+            );
+            input_log.info(
+                "WM_CHAR [{},{}] codepoint={} utf8='{s}'",
+                .{ chars[0], chars[1], codepoint, utf8_buf[0..len] },
+            );
+            switch (codepoint) {
+                // 0 => {}, not sure if this one is posssible?
+                1...26 => {}, // ignore Ctrl-A .. Ctrl-Z, handle in WM_KEYDOWN instead
+                else => app.inputUtf8(utf8_buf[0..len]),
             }
             return 0;
         },
@@ -253,7 +233,7 @@ fn WndProc(
             const dpi = win32.dpiFromHwnd(hwnd);
             const client_size = win32.getClientSize(hwnd);
             const hdc, const ps = win32.beginPaint(hwnd);
-            gdi.paint(hdc, dpi, client_size, global.font_weight, global.text.constSlice(), &global.gdi_cache);
+            gdi.paint(hdc, dpi, client_size, app.global.font_weight, app.global.text.constSlice(), &global.gdi_cache);
             win32.endPaint(hwnd, &ps);
             return 0;
         },
