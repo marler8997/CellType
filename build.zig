@@ -10,14 +10,14 @@ pub fn build(b: *std.Build) void {
 
     {
         const exe = b.addExecutable(.{
-            .name = "viewer",
+            .name = "designer",
             .root_source_file = switch (target.result.os.tag) {
-                .windows => b.path("viewer/win32.zig"),
-                else => b.path("viewer/posix.zig"),
+                .windows => b.path("designer/win32.zig"),
+                else => b.path("designer/posix.zig"),
             },
             .target = target,
             .optimize = optimize,
-            .win32_manifest = b.path("viewer/win32.manifest"),
+            .win32_manifest = b.path("designer/win32.manifest"),
         });
         exe.root_module.addImport("celltype", celltype_mod);
         exe.subsystem = .Windows;
@@ -34,6 +34,6 @@ pub fn build(b: *std.Build) void {
         if (b.args) |args| {
             run.addArgs(args);
         }
-        b.step("viewer", "").dependOn(&run.step);
+        b.step("designer", "").dependOn(&run.step);
     }
 }

@@ -34,7 +34,7 @@ fn log(
 }
 
 pub const panic = win32.messageBoxThenPanic(.{
-    .title = "CellType Viewer Panic",
+    .title = "CellType Designer Panic",
 });
 
 pub fn main() !void {
@@ -86,7 +86,7 @@ pub fn main() !void {
         }
     }
 
-    const CLASS_NAME = win32.L("CellTypeViewer");
+    const CLASS_NAME = win32.L("CellTypeDesigner");
     {
         const wc = win32.WNDCLASSEXW{
             .cbSize = @sizeOf(win32.WNDCLASSEXW),
@@ -108,7 +108,7 @@ pub fn main() !void {
     global.hwnd = win32.CreateWindowExW(
         .{},
         CLASS_NAME,
-        win32.L("CellType Viewer"),
+        win32.L("CellType Designer"),
         win32.WS_OVERLAPPEDWINDOW,
         // NOTE: can't mix CW_USEDEFAULT and non-default sizes
         window_left,
