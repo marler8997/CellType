@@ -55,6 +55,22 @@ pub const BoundaryY = struct {
     base: BoundaryBaseY,
     between: ?BetweenY = null,
     half_stroke_adjust: i8 = 0,
+    pub fn format(
+        self: BoundaryY,
+        comptime fmt: []const u8,
+        options: std.fmt.FormatOptions,
+        writer: anytype,
+    ) !void {
+        _ = fmt;
+        _ = options;
+        try writer.print("{s}", .{@tagName(self.base)});
+        if (self.between) |between| {
+            try writer.print(" (between {})", .{between});
+        }
+        if (self.half_stroke_adjust != 0) {
+            try writer.print(" adjust {}", .{self.half_stroke_adjust});
+        }
+    }
 };
 
 // NOTE: not currently and not sure if it should be used or not yet
@@ -74,6 +90,36 @@ pub const Clip = struct {
     // The number of draw commands that follow to apply the clip to. If count is
     // 0 then it applies to all the following draw operations.
     count: u8 = 0,
+    pub fn format(
+        self: Clip,
+        comptime fmt: []const u8,
+        options: std.fmt.FormatOptions,
+        writer: anytype,
+    ) !void {
+        _ = fmt;
+        _ = options;
+        var sep: []const u8 = "";
+        if (self.left) |left| {
+            try writer.print("{s}left={}", .{ sep, left });
+            sep = " ";
+        }
+        if (self.right) |right| {
+            try writer.print("{s}right={}", .{ sep, right });
+            sep = " ";
+        }
+        if (self.top) |top| {
+            try writer.print("{s}top={}", .{ sep, top });
+            sep = " ";
+        }
+        if (self.bottom) |bottom| {
+            try writer.print("{s}bottom={}", .{ sep, bottom });
+            sep = " ";
+        }
+        if (self.count != 0) {
+            try writer.print("{s}count={}", .{ sep, self.count });
+            sep = " ";
+        }
+    }
 };
 
 pub const StrokeVert = struct {
@@ -97,27 +143,62 @@ pub const StrokeHorz = struct {
     // TODO: we might want this at some point if we want strokes
     //       that grow differently based on the stroke size
     //balance: StrokeBalance,
+    pub fn format(
+        self: StrokeHorz,
+        comptime fmt: []const u8,
+        options: std.fmt.FormatOptions,
+        writer: anytype,
+    ) !void {
+        _ = fmt;
+        _ = options;
+        try writer.print("{}", .{self.y});
+    }
 };
 
 pub const BoundaryPoint = struct {
     x: BoundaryX,
     y: BoundaryY,
+    pub fn format(
+        self: BoundaryPoint,
+        comptime fmt: []const u8,
+        options: std.fmt.FormatOptions,
+        writer: anytype,
+    ) !void {
+        _ = fmt;
+        _ = options;
+        try writer.print("{},{}", .{ self.x, self.y });
+    }
 };
 
 pub const StrokeDiag = struct {
     a: BoundaryPoint,
     b: BoundaryPoint,
-};
-
-const Point = struct {
-    x: BoundaryX,
-    y: BoundaryY,
+    pub fn format(
+        self: StrokeDiag,
+        comptime fmt: []const u8,
+        options: std.fmt.FormatOptions,
+        writer: anytype,
+    ) !void {
+        _ = fmt;
+        _ = options;
+        try writer.print("{} {}", .{ self.a, self.b });
+    }
 };
 
 pub const StrokeCurve = struct {
-    start: Point,
-    control: Point,
-    end: Point,
+    start: BoundaryPoint,
+    control: BoundaryPoint,
+    end: BoundaryPoint,
+    pub fn format(
+        self: StrokeCurve,
+        comptime fmt: []const u8,
+        options: std.fmt.FormatOptions,
+        writer: anytype,
+    ) !void {
+        _ = fmt;
+        _ = options;
+        try writer.print("{} {} {}", .{ self.start, self.control, self.end });
+    }
 };
 
 pub const Condition = enum {
@@ -125,17 +206,30 @@ pub const Condition = enum {
     serif,
 };
 
+pub const Op2Tag = enum {
+    todo,
+    clip,
+    stroke_vert,
+    stroke_horz,
+    stroke_diag,
+    stroke_dot,
+    stroke_curve,
+};
+pub const op2_count = std.meta.fields(Op2Tag).len;
+
+pub const Op2 = union(Op2Tag) {
+    todo: void,
+    clip: Clip,
+    stroke_vert: StrokeVert,
+    stroke_horz: StrokeHorz,
+    stroke_diag: StrokeDiag,
+    stroke_dot: BoundaryPoint,
+    stroke_curve: StrokeCurve,
+};
+
 pub const Op = struct {
     condition: Condition = .yes,
-    op: union(enum) {
-        todo: void,
-        clip: Clip,
-        stroke_vert: StrokeVert,
-        stroke_horz: StrokeHorz,
-        stroke_diag: StrokeDiag,
-        stroke_dot: BoundaryPoint,
-        stroke_curve: StrokeCurve,
-    },
+    op: Op2,
     pub fn format(
         self: Op,
         comptime fmt: []const u8,
@@ -150,8 +244,12 @@ pub const Op = struct {
         }
         switch (self.op) {
             .todo => try writer.writeAll("todo"),
-            .stroke_vert => |stroke_vert| try writer.print("stroke_vert {}", .{stroke_vert}),
-            else => @panic("todo"),
+            .clip => |c| try writer.print("clip {}", .{c}),
+            .stroke_vert => |s| try writer.print("stroke_vert {}", .{s}),
+            .stroke_horz => |s| try writer.print("stroke_horz {}", .{s}),
+            .stroke_diag => |s| try writer.print("stroke_diag {}", .{s}),
+            .stroke_dot => |s| try writer.print("stroke_dot {}", .{s}),
+            .stroke_curve => |s| try writer.print("stroke_curve {}", .{s}),
         }
     }
 };

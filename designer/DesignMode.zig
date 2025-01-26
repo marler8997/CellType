@@ -14,6 +14,7 @@ op_cursor: usize = 0,
 
 // if true, will add the default views on the first render if there are no views
 add_default_views: bool = true,
+add_default_ops: bool = true,
 layout: ?Layout = null,
 view_inputs: std.ArrayListUnmanaged(ViewInput) = .{},
 grayscale: std.ArrayListUnmanaged(u8) = .{},
@@ -168,6 +169,8 @@ pub fn arrowKey(self: *DesignMode, key: app.ArrowKey) void {
     if (self.ops.items.len == 0) return;
     std.debug.assert(self.op_cursor < self.ops.items.len);
     switch (key) {
+        .left => self.updateOp(.left),
+        .right => self.updateOp(.right),
         .down => {
             if (self.op_cursor + 1 < self.ops.items.len) {
                 self.op_cursor += 1;
@@ -182,12 +185,47 @@ pub fn arrowKey(self: *DesignMode, key: app.ArrowKey) void {
         },
     }
 }
+fn updateOp(self: *DesignMode, direction: enum { left, right }) void {
+    std.debug.assert(self.ops.items.len > 0);
+    std.debug.assert(self.op_cursor < self.ops.items.len);
+
+    const current_op_tag: celltype.design.Op2Tag = self.ops.items[self.op_cursor].op;
+    const add = switch (direction) {
+        .left => celltype.design.op2_count - 1,
+        .right => 1,
+    };
+    const new_op_tag: celltype.design.Op2Tag = @enumFromInt((@intFromEnum(current_op_tag) + add) % celltype.design.op2_count);
+    self.ops.items[self.op_cursor] = getDefault(new_op_tag);
+    root.invalidate();
+}
+
+fn getDefault(op: celltype.design.Op2Tag) celltype.design.Op {
+    return switch (op) {
+        .todo => .{ .op = .todo },
+        .clip => .{ .op = .{ .clip = .{ .left = .{ .base = .center }, .top = .{ .base = .baseline_stroke } } } },
+        .stroke_vert => .{ .op = .{ .stroke_vert = .{ .x = .{ .base = .center } } } },
+        .stroke_horz => .{ .op = .{ .stroke_horz = .{ .y = .{ .base = .baseline_stroke } } } },
+        .stroke_diag => .{ .op = .{ .stroke_diag = .{
+            .a = .{ .x = .{ .base = .uppercase_left }, .y = .{ .base = .baseline_stroke } },
+            .b = .{ .x = .{ .base = .uppercase_right }, .y = .{ .base = .uppercase_top } },
+        } } },
+        .stroke_dot => .{ .op = .{ .stroke_dot = .{
+            .x = .{ .base = .center, .half_stroke_adjust = 1 },
+            .y = .{ .base = .uppercase_top },
+        } } },
+        .stroke_curve => .{ .op = .{ .stroke_curve = .{
+            .start = .{ .x = .{ .base = .uppercase_left }, .y = .{ .base = .lowercase_top } },
+            .control = .{ .x = .{ .base = .center }, .y = .{ .base = .baseline_stroke } },
+            .end = .{ .x = .{ .base = .uppercase_right }, .y = .{ .base = .lowercase_top } },
+        } } },
+    };
+}
 
 pub fn inputUtf8(self: *DesignMode, utf8: []const u8) void {
     if (std.mem.eql(u8, utf8, "n")) {
         self.ops.append(
             self.arena.allocator(),
-            .{ .op = .{ .stroke_vert = .{ .x = .{ .base = .center } } } },
+            getDefault(.stroke_vert),
         ) catch |e| oom(e);
         root.invalidate();
     }
@@ -241,6 +279,15 @@ pub fn render(
                 .cell_pixel_size = cell_pixel_size,
                 .stroke_width = 3,
             }) catch |e| oom(e);
+        }
+    }
+    if (self.add_default_ops) {
+        self.add_default_ops = false;
+        if (self.ops.items.len == 0) {
+            self.ops.append(
+                self.arena.allocator(),
+                getDefault(.stroke_vert),
+            ) catch |e| oom(e);
         }
     }
 

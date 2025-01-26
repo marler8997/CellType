@@ -35,12 +35,14 @@ pub fn backspace() void {
     root.invalidate();
 }
 
-pub const ArrowKey = enum { down, up };
+pub const ArrowKey = enum { left, right, down, up };
 
 pub fn arrowKey(key: ArrowKey) void {
     switch (global.mode) {
         .view => {
             const new_weight = @max(0.01, switch (key) {
+                .left => return,
+                .right => return,
                 .down => global.font_weight - 0.01,
                 .up => global.font_weight + 0.01,
             });

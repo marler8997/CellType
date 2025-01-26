@@ -228,8 +228,10 @@ fn WndProc(
             input_log.info("WM_KEYDOWN {}", .{wparam});
             switch (wparam) {
                 @intFromEnum(win32.VK_BACK) => app.backspace(),
-                @intFromEnum(win32.VK_DOWN) => app.arrowKey(.down),
+                @intFromEnum(win32.VK_LEFT) => app.arrowKey(.left),
                 @intFromEnum(win32.VK_UP) => app.arrowKey(.up),
+                @intFromEnum(win32.VK_RIGHT) => app.arrowKey(.right),
+                @intFromEnum(win32.VK_DOWN) => app.arrowKey(.down),
                 'A'...'Z' => |key| {
                     if (win32.GetKeyState(@intFromEnum(win32.VK_CONTROL)) < 0) {
                         app.ctrlKey(@intCast(key + ('a' - 'A')));
