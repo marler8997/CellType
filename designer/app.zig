@@ -74,12 +74,17 @@ pub fn ctrlKey(key: u8) void {
 }
 
 pub fn inputUtf8(utf8: []const u8) void {
-    global.text.appendSlice(utf8) catch {
-        // todo show error message in UI
-        std.log.err("too many characters", .{});
-        root.beep();
-    };
-    root.invalidate();
+    switch (global.mode) {
+        .view => {
+            global.text.appendSlice(utf8) catch {
+                // todo show error message in UI
+                std.log.err("too many characters", .{});
+                root.beep();
+            };
+            root.invalidate();
+        },
+        .design => global.design_mode.inputUtf8(utf8),
+    }
 }
 
 pub const Rect = struct {
@@ -122,6 +127,7 @@ pub fn render(target: root.RenderTarget, scale: f32, render_size: XY(i32)) void 
     }
 }
 fn renderViewMode(target: root.RenderTarget, scale: f32, render_size: XY(i32)) void {
+    _ = render_size;
     // NOTE: the win32 platform is currently using GDI which means
     //       we need to avoid overdraw (drawing the same pixel twice)
     //       see https://catch22.net/tuts/win32/flicker-free-drawing/
@@ -163,9 +169,6 @@ fn renderViewMode(target: root.RenderTarget, scale: f32, render_size: XY(i32)) v
     };
     var y: i32 = margin;
 
-    target.fillRect(.bg, .{ .left = 0, .top = 0, .right = render_size.x, .bottom = y });
-    target.fillRect(.bg, .{ .left = 0, .top = margin, .right = margin, .bottom = render_size.y });
-
     const graphemes = global.text.constSlice();
 
     for (cell_sizes) |cell_size| {
@@ -193,15 +196,11 @@ fn renderViewMode(target: root.RenderTarget, scale: f32, render_size: XY(i32)) v
             ) catch |err| std.debug.panic("render failed with {s}", .{@errorName(err)});
             target.renderBitmap(bmp, .{ .x = x, .y = y }, .{ .x = cell_size.x, .y = cell_size.y });
             x += @as(i32, @intCast(cell_size.x));
-            target.fillRect(.bg, .{ .left = x, .top = y, .right = x + spacing.x, .bottom = y + cell_size.y });
             x += spacing.x;
         }
-        target.fillRect(.bg, .{ .left = x, .top = y, .right = render_size.x, .bottom = y + cell_size.y });
         y += cell_size.y;
-        target.fillRect(.bg, .{ .left = margin, .top = y, .right = render_size.x, .bottom = y + spacing.y });
         y += spacing.y;
     }
-    target.fillRect(.bg, .{ .left = 0, .top = y, .right = render_size.x, .bottom = render_size.y });
 }
 
 fn isUtf8Extension(c: u8) bool {

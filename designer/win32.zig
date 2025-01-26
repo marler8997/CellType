@@ -5,14 +5,21 @@ const win32 = @import("win32").everything;
 
 const app = @import("app.zig");
 
-const gdi = @import("gdi.zig");
+const Rgb8 = @import("Rgb8.zig");
 const theme = @import("theme.zig");
 const XY = @import("xy.zig").XY;
 
 const global = struct {
+    // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    // TODO: remove all references to dwrite when our text rendering is somewhat ready
+    var dwrite_factory: *win32.IDWriteFactory = undefined;
+    var d2d_factory: *win32.ID2D1Factory = undefined;
     var hwnd: win32.HWND = undefined;
-    var gdi_cache: gdi.ObjectCache = .{};
     var wm_char_high_surrogate: u16 = 0;
+
+    var maybe_d2d: ?D2d = null;
+    var bmp_arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+    var bmp: ?RenderTarget.Bitmap = null;
 };
 
 pub const std_options: std.Options = .{
@@ -41,7 +48,7 @@ pub fn beep() void {
     _ = win32.MessageBeep(@bitCast(win32.MB_ICONWARNING));
 }
 
-pub fn main() !void {
+pub fn main() !u8 {
     _ = win32.AttachConsole(win32.ATTACH_PARENT_PROCESS);
 
     var arena_instance = std.heap.ArenaAllocator.init(std.heap.page_allocator);
@@ -90,6 +97,32 @@ pub fn main() !void {
                 ) else window_size.x;
             } else std.debug.panic("unknown cmdline option '{s}'", .{arg});
         }
+    }
+
+    {
+        const options: win32.D2D1_FACTORY_OPTIONS = .{
+            .debugLevel = switch (builtin.mode) {
+                .Debug => .WARNING,
+                else => .NONE,
+            },
+        };
+        const hr = win32.D2D1CreateFactory(
+            .SINGLE_THREADED,
+            win32.IID_ID2D1Factory,
+            &options,
+            @ptrCast(&global.d2d_factory),
+        );
+        if (hr < 0) return win32.panicHresult("D2D1CreateFactory", hr);
+    }
+    defer _ = global.d2d_factory.IUnknown.Release();
+
+    {
+        const hr = win32.DWriteCreateFactory(
+            win32.DWRITE_FACTORY_TYPE_SHARED,
+            win32.IID_IDWriteFactory,
+            @ptrCast(&global.dwrite_factory),
+        );
+        if (hr < 0) win32.panicHresult("DWriteCreateFactory", hr);
     }
 
     const CLASS_NAME = win32.L("CellTypeDesigner");
@@ -159,12 +192,15 @@ pub fn main() !void {
             _ = win32.DispatchMessageW(&msg);
         }
     };
-    if (std.math.cast(u32, wparam)) |c| {
+
+    if (global.maybe_d2d) |*d2d| d2d.deinit();
+
+    if (std.math.cast(u8, wparam)) |c| {
         std.log.info("quit {}", .{c});
-        win32.ExitProcess(c);
+        return c;
     }
-    std.log.info("quit {} (0xffffffff)", .{wparam});
-    win32.ExitProcess(0xffffffff);
+    std.log.info("quit {} (0xff)", .{wparam});
+    return 0xff;
 }
 
 fn WndProc(
@@ -250,12 +286,41 @@ fn WndProc(
         win32.WM_PAINT => {
             const dpi = win32.dpiFromHwnd(hwnd);
             const client_size = win32.getClientSize(hwnd);
+
             const hdc, const ps = win32.beginPaint(hwnd);
+            _ = hdc;
+
+            if (global.maybe_d2d == null) {
+                global.maybe_d2d = D2d.init(hwnd);
+            }
+            const d2d = &(global.maybe_d2d.?);
+            {
+                const size: win32.D2D_SIZE_U = .{
+                    .width = @intCast(client_size.cx),
+                    .height = @intCast(client_size.cy),
+                };
+                const hr = d2d.target.Resize(&size);
+                if (hr < 0) win32.panicHresult("D2dResize", hr);
+            }
+            d2d.target.ID2D1RenderTarget.BeginDraw();
+            {
+                const color = d2dFromRgb8(theme.Color.bg.getRgb8());
+                d2d.target.ID2D1RenderTarget.Clear(&color);
+            }
             app.render(
-                .{ .hdc = hdc },
+                .{},
                 win32.scaleFromDpi(f32, dpi),
                 .{ .x = client_size.cx, .y = client_size.cy },
             );
+            {
+                var tag1: u64 = undefined;
+                var tag2: u64 = undefined;
+                const hr = d2d.target.ID2D1RenderTarget.EndDraw(&tag1, &tag2);
+                if (hr < 0) std.debug.panic(
+                    "D2dEndDraw error, tag1={}, tag2={}, hresult=0x{x}",
+                    .{ tag1, tag2, @as(u32, @bitCast(hr)) },
+                );
+            }
             win32.endPaint(hwnd, &ps);
             return 0;
         },
@@ -269,26 +334,148 @@ fn WndProc(
     }
 }
 
+const D2d = struct {
+    target: *win32.ID2D1HwndRenderTarget,
+    brush: *win32.ID2D1SolidColorBrush,
+    bmp: ?struct {
+        obj: *win32.ID2D1Bitmap,
+        size: XY(u16),
+    } = null,
+    pub fn init(hwnd: win32.HWND) D2d {
+        var target: *win32.ID2D1HwndRenderTarget = undefined;
+        const target_props = win32.D2D1_RENDER_TARGET_PROPERTIES{
+            .type = .DEFAULT,
+            .pixelFormat = .{
+                .format = .B8G8R8A8_UNORM,
+                .alphaMode = .PREMULTIPLIED,
+            },
+            .dpiX = 0,
+            .dpiY = 0,
+            .usage = .{},
+            .minLevel = .DEFAULT,
+        };
+        const hwnd_target_props = win32.D2D1_HWND_RENDER_TARGET_PROPERTIES{
+            .hwnd = hwnd,
+            .pixelSize = .{ .width = 0, .height = 0 },
+            .presentOptions = .{},
+        };
+
+        {
+            const hr = global.d2d_factory.CreateHwndRenderTarget(
+                &target_props,
+                &hwnd_target_props,
+                &target,
+            );
+            if (hr < 0) return win32.panicHresult("CreateHwndRenderTarget", hr);
+        }
+        errdefer _ = target.IUnknown.Release();
+
+        {
+            var dc: *win32.ID2D1DeviceContext = undefined;
+            {
+                const hr = target.IUnknown.QueryInterface(win32.IID_ID2D1DeviceContext, @ptrCast(&dc));
+                if (hr < 0) return win32.panicHresult("GetDeviceContext", hr);
+            }
+            defer _ = dc.IUnknown.Release();
+            // just make everything DPI aware, all applications should just do this
+            dc.SetUnitMode(win32.D2D1_UNIT_MODE_PIXELS);
+        }
+
+        var brush: *win32.ID2D1SolidColorBrush = undefined;
+        {
+            const color: win32.D2D_COLOR_F = .{ .r = 0, .g = 0, .b = 0, .a = 0 };
+            const hr = target.ID2D1RenderTarget.CreateSolidColorBrush(&color, null, &brush);
+            if (hr < 0) return win32.panicHresult("CreateSolidBrush", hr);
+        }
+        errdefer _ = brush.IUnknown.Release();
+
+        return .{
+            .target = target,
+            .brush = brush,
+            .bmp = null,
+        };
+    }
+    pub fn deinit(self: *D2d) void {
+        if (self.bmp) |bmp| _ = bmp.obj.IUnknown.Release();
+        _ = self.brush.IUnknown.Release();
+        _ = self.target.IUnknown.Release();
+    }
+    pub fn solid(self: *const D2d, color: win32.D2D_COLOR_F) *win32.ID2D1Brush {
+        self.brush.SetColor(&color);
+        return &self.brush.ID2D1Brush;
+    }
+};
+fn d2dFromRgb8(rgb: Rgb8) win32.D2D_COLOR_F {
+    return .{
+        .r = @as(f32, @floatFromInt(rgb.r)) / 255.0,
+        .g = @as(f32, @floatFromInt(rgb.g)) / 255.0,
+        .b = @as(f32, @floatFromInt(rgb.b)) / 255.0,
+        .a = 1.0,
+    };
+}
+
 pub const Rect = win32.RECT;
 
 pub const RenderTarget = struct {
-    hdc: win32.HDC,
-
     pub fn fillRect(self: RenderTarget, color: theme.Color, rect: win32.RECT) void {
-        win32.fillRect(self.hdc, rect, global.gdi_cache.getBrush(color));
+        _ = self;
+        const d2d = &(global.maybe_d2d.?);
+        const r: win32.D2D_RECT_F = .{
+            .left = @floatFromInt(rect.left),
+            .top = @floatFromInt(rect.top),
+            .right = @floatFromInt(rect.right),
+            .bottom = @floatFromInt(rect.bottom),
+        };
+        const c = d2d.solid(d2dFromRgb8(color.getRgb8()));
+        d2d.target.ID2D1RenderTarget.FillRectangle(&r, c);
     }
     // TODO: remove this method when our text rendering is ready to do the UI
     pub fn drawText(self: RenderTarget, text_size: XY(u16), pos: XY(i32), text: []const u8) void {
-        _ = win32.SetBkColor(self.hdc, gdi.colorrefFromRgb(theme.Color.bg.getRgb8()));
-        _ = win32.SetTextColor(self.hdc, gdi.colorrefFromRgb(theme.Color.fg.getRgb8()));
+        _ = self;
+        const d2d = &(global.maybe_d2d.?);
 
-        for (text, 0..) |c, i| {
-            const x = pos.x + @as(i32, @intCast(text_size.x * i));
-            const size = win32.getTextExtentA(self.hdc, &[_]u8{c});
-            // TODO: use our own text rendering when it's ready
-            win32.textOutA(self.hdc, x, pos.y, &[_]u8{c});
-            _ = size;
-            //win32.fillRect(
+        var text_format: *win32.IDWriteTextFormat = undefined;
+        {
+            const hr = global.dwrite_factory.CreateTextFormat(
+                win32.L("Segoe UI"),
+                null,
+                win32.DWRITE_FONT_WEIGHT_NORMAL,
+                win32.DWRITE_FONT_STYLE_NORMAL,
+                win32.DWRITE_FONT_STRETCH_NORMAL,
+                @as(f32, @floatFromInt(text_size.y)) * 0.8,
+                win32.L("en-us"),
+                &text_format,
+            );
+            if (hr < 0) win32.panicHresult("CreateTextFormat", hr);
+        }
+        defer _ = text_format.IUnknown.Release();
+
+        var codepoint_index: i32 = 0;
+        var offset: usize = 0;
+        while (offset < text.len) : (codepoint_index += 1) {
+            const utf8_len = std.unicode.utf8ByteSequenceLength(text[offset]) catch @panic("invalid utf8");
+            if (utf8_len > text.len) @panic("utf8 truncated");
+            const codepoint = std.unicode.utf8Decode(text[offset..][0..utf8_len]) catch @panic("invalid utf8");
+            offset += utf8_len;
+
+            const text_wide = [1:0]u16{@truncate(codepoint)};
+            const left = pos.x + text_size.x * codepoint_index;
+            std.log.info("rendering codepoint {} x={}", .{ codepoint, left });
+            const rect: win32.D2D_RECT_F = .{
+                .left = @floatFromInt(left),
+                .top = @floatFromInt(pos.y),
+                .right = @floatFromInt(left + text_size.x),
+                .bottom = @floatFromInt(pos.y + text_size.y),
+            };
+            d2d.target.ID2D1RenderTarget.DrawText(
+                &text_wide,
+                1,
+                text_format,
+                &rect,
+                d2d.solid(d2dFromRgb8(theme.Color.white.getRgb8())),
+                .{},
+                .NATURAL,
+            );
         }
     }
 
@@ -297,40 +484,123 @@ pub const RenderTarget = struct {
         grayscale: [*]u8,
         stride: usize,
 
-        mem_hdc: win32.HDC,
-        old_bmp: ?win32.HGDIOBJ,
-
+        size: XY(u16),
         pub fn renderDone(self: *Bitmap) void {
-            _ = win32.SelectObject(self.mem_hdc, self.old_bmp);
-            win32.deleteDc(self.mem_hdc);
             self.* = undefined;
+        }
+
+        fn slice(self: Bitmap) []u8 {
+            return self.grayscale[0 .. self.stride * @as(usize, self.size.y)];
         }
     };
     pub fn getBitmap(self: RenderTarget, size: XY(u16)) Bitmap {
-        const bmp = global.gdi_cache.getBitmap(self.hdc, size);
-        const mem_hdc = win32.CreateCompatibleDC(self.hdc);
-        errdefer win32.deleteDc(self.mem_hdc);
-        const old_bmp = win32.SelectObject(mem_hdc, @ptrCast(bmp.section));
-        errdefer _ = win32.SelectObject(mem_hdc, old_bmp);
-        return .{
-            .grayscale = bmp.grayscale,
-            .stride = (bmp.size.x + 3) & ~@as(u32, 3),
-            .mem_hdc = mem_hdc,
-            .old_bmp = old_bmp,
+        _ = self;
+        if (global.bmp) |bmp| {
+            if (bmp.size.x >= size.x and bmp.size.y >= size.y)
+                return bmp;
+            std.log.info(
+                "freeing bitmap of size {}x{} for size {}x{}",
+                .{ bmp.size.x, bmp.size.y, size.x, size.y },
+            );
+            global.bmp_arena.allocator().free(bmp.slice());
+            global.bmp = null;
+        }
+        const stride: usize = size.x * 4;
+        const len = stride * @as(usize, size.y);
+        std.log.info("allocating {} bytes for bitmap ({}x{})", .{ len, size.x, size.y });
+        global.bmp = .{
+            .grayscale = (global.bmp_arena.allocator().alloc(u8, len) catch |e| oom(e)).ptr,
+            .stride = stride,
+            .size = size,
         };
+        return global.bmp.?;
     }
     pub fn renderBitmap(self: RenderTarget, bmp: Bitmap, pos: XY(i32), size: XY(i32)) void {
-        if (0 == win32.BitBlt(
-            self.hdc,
-            pos.x,
-            pos.y,
-            size.x,
-            size.y,
-            bmp.mem_hdc,
-            0,
-            0,
-            win32.SRCCOPY,
-        )) win32.panicWin32("BitBlt", win32.GetLastError());
+        _ = self;
+        std.debug.assert(size.x <= bmp.size.x);
+        std.debug.assert(size.y <= bmp.size.y);
+
+        // convert from grayscale to bgra
+        for (0..@intCast(size.y)) |row| {
+            const row_offset = bmp.stride * row;
+            for (0..@intCast(size.x)) |col_reverse| {
+                const col = @as(usize, @intCast(size.x)) - col_reverse - 1;
+                const alpha = bmp.grayscale[row_offset + col];
+                bmp.grayscale[row_offset + col * 4 + 0] = alpha; // blue
+                bmp.grayscale[row_offset + col * 4 + 1] = alpha; // green
+                bmp.grayscale[row_offset + col * 4 + 2] = alpha; // red
+                bmp.grayscale[row_offset + col * 4 + 3] = alpha; // alpha
+            }
+        }
+
+        const d2d = &(global.maybe_d2d.?);
+
+        if (d2d.bmp) |old_bmp| {
+            // This is throwing a segfault, might be a problem with the zigwin32 bindings
+            //const old_size = old_bmp.obj.GetPixelSize();
+            const old_size = old_bmp.size;
+            if (old_size.x < bmp.size.x or old_size.y < bmp.size.y) {
+                _ = old_bmp.obj.IUnknown.Release();
+                d2d.bmp = null;
+            }
+        }
+
+        if (d2d.bmp == null) {
+            var new_bmp: *win32.ID2D1Bitmap = undefined;
+            {
+                const props = win32.D2D1_BITMAP_PROPERTIES{
+                    .pixelFormat = .{
+                        .format = .B8G8R8A8_UNORM,
+                        .alphaMode = .PREMULTIPLIED,
+                    },
+                    .dpiX = 0,
+                    .dpiY = 0,
+                };
+                const hr = d2d.target.ID2D1RenderTarget.CreateBitmap(
+                    .{ .width = @intCast(bmp.size.x), .height = @intCast(bmp.size.y) },
+                    null,
+                    0,
+                    &props,
+                    &new_bmp,
+                );
+                if (hr < 0) win32.panicHresult("CreateBitmap", hr);
+            }
+            d2d.bmp = .{ .obj = new_bmp, .size = bmp.size };
+        }
+
+        {
+            const rect = win32.D2D_RECT_U{
+                .left = 0,
+                .top = 0,
+                .right = @intCast(size.x),
+                .bottom = @intCast(size.y),
+            };
+            const hr = d2d.bmp.?.obj.CopyFromMemory(
+                &rect,
+                bmp.grayscale,
+                @intCast(bmp.stride),
+            );
+            if (hr < 0) win32.panicHresult("D2dBitmapCopy", hr);
+        }
+        const dest_rect = win32.D2D_RECT_F{
+            .left = @floatFromInt(pos.x),
+            .top = @floatFromInt(pos.y),
+            .right = @floatFromInt(pos.x + size.x),
+            .bottom = @floatFromInt(pos.y + size.y),
+        };
+        const src_rect = win32.D2D_RECT_F{
+            .left = 0,
+            .top = 0,
+            .right = @floatFromInt(size.x),
+            .bottom = @floatFromInt(size.y),
+        };
+        d2d.target.ID2D1RenderTarget.DrawBitmap(
+            d2d.bmp.?.obj,
+            &dest_rect,
+            1.0, // opacity
+            .LINEAR, // interpolation mode
+            &src_rect,
+        );
     }
 };
 

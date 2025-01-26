@@ -3,8 +3,11 @@ const DesignMode = @This();
 const std = @import("std");
 const app = @import("app.zig");
 const root = @import("root");
+const celltype = @import("celltype");
 
 const XY = @import("xy.zig").XY;
+
+operations: std.ArrayListUnmanaged(celltype.design.Op) = .{},
 
 cell_size: XY(u16) = .{ .x = 10, .y = 20 },
 cell_pixel_size: ?u32 = null,
@@ -64,6 +67,11 @@ pub fn getLayout(self: *DesignMode, render_scale: f32, cell_pixel_size: u32) *co
         .grid_pos = .{ .x = margin, .y = grid_top },
     };
     return &(self.layout.?);
+}
+
+pub fn inputUtf8(self: *DesignMode, utf8: []const u8) void {
+    _ = self;
+    _ = utf8;
 }
 
 pub fn mouseButton(

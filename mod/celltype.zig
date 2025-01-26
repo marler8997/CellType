@@ -3,8 +3,8 @@
 const std = @import("std");
 
 const curve = @import("curve.zig");
-const design = @import("design.zig");
-const glyphs = @import("glyphs.zig");
+pub const design = @import("design.zig");
+pub const glyphs = @import("glyphs.zig");
 
 const PixelBoundary = @import("PixelBoundary.zig");
 
