@@ -304,7 +304,7 @@ fn WndProc(
             }
             d2d.target.ID2D1RenderTarget.BeginDraw();
             {
-                const color = d2dFromRgb8(theme.Color.bg.getRgb8());
+                const color = d2dFromRgb8(theme.bg.getRgb8());
                 d2d.target.ID2D1RenderTarget.Clear(&color);
             }
             app.render(
@@ -480,7 +480,7 @@ pub const RenderTarget = struct {
                 1,
                 text_format,
                 &rect,
-                d2d.solid(d2dFromRgb8(theme.Color.white.getRgb8())),
+                d2d.solid(d2dFromRgb8(theme.fg.getRgb8())),
                 .{},
                 .NATURAL,
             );

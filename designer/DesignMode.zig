@@ -19,16 +19,25 @@ grayscale: std.ArrayListUnmanaged(u8) = .{},
 const ViewInput = struct {
     //position: XY(i32),
     cell_size: XY(u16),
+    stroke_width: u16,
     cell_pixel_size: i32,
 };
 
 const ViewLayout = struct {
     //position: XY(i32),
     cell_size: XY(u16),
+    stroke_width: u16,
     cell_pixel_size: i32,
     zoom_out_button: app.Rect,
     zoom_in_button: app.Rect,
     pixel_grid: app.Rect,
+    pub fn isUpdated(self: *const ViewLayout, input: *const ViewInput) bool {
+        return true and
+            //self.position.eql(input.position) and
+            self.cell_size.eql(input.cell_size) and
+            self.stroke_width == input.stroke_width and
+            self.cell_pixel_size == input.cell_pixel_size;
+    }
 };
 
 const Layout = struct {
@@ -62,9 +71,7 @@ fn updateLayout(
             if (layout.render_scale != render_scale) break :need_update;
             if (layout.views.items.len != view_inputs.len) break :need_update;
             for (layout.views.items, view_inputs) |*view, *view_input| {
-                //if (!view.position.eql(view_input.position)) break :need_update;
-                if (!view.cell_size.eql(view_input.cell_size)) break :need_update;
-                if (view.cell_pixel_size != view_input.cell_pixel_size) break :need_update;
+                if (!view.isUpdated(view_input)) break :need_update;
             }
             // we already up-to-date
             return false;
@@ -109,6 +116,7 @@ fn updateLayout(
 
         views.appendAssumeCapacity(.{
             .cell_size = view_input.cell_size,
+            .stroke_width = view_input.stroke_width,
             .cell_pixel_size = view_input.cell_pixel_size,
             .zoom_out_button = .{
                 .left = window_margin,
@@ -205,10 +213,12 @@ pub fn render(
             self.view_inputs.append(self.arena.allocator(), .{
                 .cell_size = .{ .x = 10, .y = 20 },
                 .cell_pixel_size = cell_pixel_size,
+                .stroke_width = 2,
             }) catch |e| oom(e);
             self.view_inputs.append(self.arena.allocator(), .{
                 .cell_size = .{ .x = 20, .y = 36 },
                 .cell_pixel_size = cell_pixel_size,
+                .stroke_width = 3,
             }) catch |e| oom(e);
         }
     }
@@ -220,6 +230,22 @@ pub fn render(
         _ = app.drawTextCentered(target, layout.text_size, view.zoom_out_button.center(), zoom_out_text);
         target.fillRect(.button_bg, view.zoom_in_button);
         _ = app.drawTextCentered(target, layout.text_size, view.zoom_in_button.center(), zoom_in_text);
+
+        const cell_count = @as(usize, view.cell_size.x) * @as(usize, view.cell_size.y);
+        self.grayscale.resize(self.arena.allocator(), cell_count) catch |e| oom(e);
+
+        const config: celltype.Config = .{};
+        celltype.renderOps(
+            &config,
+            u16,
+            view.cell_size.x,
+            view.cell_size.y,
+            view.stroke_width,
+            self.grayscale.items.ptr,
+            view.cell_size.x,
+            .{ .output_precleared = false },
+            self.ops.items,
+        );
 
         const grid_line_size: i32 = pxFromPt(render_scale, 1.0);
 
@@ -235,6 +261,7 @@ pub fn render(
                     });
                     y += grid_line_size;
                 }
+                const row_offset: usize = @as(usize, view.cell_size.x) * row;
 
                 var x: i32 = view.pixel_grid.left;
                 for (0..@intCast(view.cell_size.x)) |col| {
@@ -247,7 +274,8 @@ pub fn render(
                         });
                         x += grid_line_size;
                     }
-                    target.fillRect(.black, .{
+                    const shade = self.grayscale.items[row_offset + col];
+                    target.fillRect(.{ .shade = shade }, .{
                         .left = x,
                         .top = y,
                         .right = x + view.cell_pixel_size,

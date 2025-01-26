@@ -213,7 +213,7 @@ fn renderViewMode(target: root.RenderTarget, scale: f32, render_size: XY(i32)) v
                 //if (true) break :blk 1;
                 break :blk celltype.calcStrokeWidth(u16, cell_size.x, cell_size.y, global.font_weight);
             };
-            grapheme_offset += celltype.render(
+            grapheme_offset += celltype.renderText(
                 &config,
                 u16,
                 cell_size.x,
@@ -221,8 +221,8 @@ fn renderViewMode(target: root.RenderTarget, scale: f32, render_size: XY(i32)) v
                 stroke_width,
                 bmp.grayscale,
                 bmp.stride,
-                graphemes[grapheme_offset..],
                 .{ .output_precleared = false },
+                graphemes[grapheme_offset..],
             ) catch |err| std.debug.panic("render failed with {s}", .{@errorName(err)});
             target.renderBitmap(bmp, .{ .x = x, .y = y }, .{ .x = cell_size.x, .y = cell_size.y });
             x += @as(i32, @intCast(cell_size.x));

@@ -40,7 +40,12 @@ pub const Config = struct {
     serif: bool = true,
 };
 
-pub fn render(
+pub const RenderOptions = struct {
+    output_precleared: bool,
+    // TODO: add option for vertical direction
+};
+
+pub fn renderText(
     config: *const Config,
     comptime Dim: type,
     width: Dim,
@@ -48,15 +53,26 @@ pub fn render(
     stroke_width: Dim,
     grayscale: [*]u8,
     stride: usize,
+    opt: RenderOptions,
     grapheme_utf8: []const u8,
-    opt: struct {
-        output_precleared: bool,
-        // TODO: add option for vertical direction
-    },
 ) error{Utf8Decode}!usize {
     std.debug.assert(grapheme_utf8.len > 0);
     const utf8_len, const ops = try getOps(grapheme_utf8);
+    renderOps(config, Dim, width, height, stroke_width, grayscale, stride, opt, ops);
+    return utf8_len;
+}
 
+pub fn renderOps(
+    config: *const Config,
+    comptime Dim: type,
+    width: Dim,
+    height: Dim,
+    stroke_width: Dim,
+    grayscale: [*]u8,
+    stride: usize,
+    opt: RenderOptions,
+    ops: []const design.Op,
+) void {
     // NOTE: the ClipBoundaries are purely an optimization for the
     //       CPU renderer, they should not affect the output and should
     //       not be used in a GPU-based renderer.
@@ -87,7 +103,6 @@ pub fn render(
             );
         }
     }
-    return utf8_len;
 }
 
 fn getOps(grapheme_utf8: []const u8) error{Utf8Decode}!struct { usize, []const design.Op } {
