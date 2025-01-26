@@ -5,10 +5,12 @@ const app = @import("app.zig");
 const root = @import("root");
 const celltype = @import("celltype");
 
+const theme = @import("theme.zig");
 const XY = @import("xy.zig").XY;
 
 arena: std.heap.ArenaAllocator,
 ops: std.ArrayListUnmanaged(celltype.design.Op) = .{},
+op_cursor: usize = 0,
 
 // if true, will add the default views on the first render if there are no views
 add_default_views: bool = true,
@@ -150,7 +152,7 @@ fn updateLayout(
         .text_size = text_size,
         .views = views,
         .ops_pos = .{
-            .x = max_grid_right + pxFromPt(render_scale, 10.0),
+            .x = max_grid_right + pxFromPt(render_scale, 25.0),
             .y = window_margin,
         },
         .ops_char_size = .{
@@ -160,6 +162,25 @@ fn updateLayout(
     };
     std.debug.assert(!updateLayout(allocator, layout_ref, render_scale, view_inputs));
     return true;
+}
+
+pub fn arrowKey(self: *DesignMode, key: app.ArrowKey) void {
+    if (self.ops.items.len == 0) return;
+    std.debug.assert(self.op_cursor < self.ops.items.len);
+    switch (key) {
+        .down => {
+            if (self.op_cursor + 1 < self.ops.items.len) {
+                self.op_cursor += 1;
+                root.invalidate();
+            }
+        },
+        .up => {
+            if (self.op_cursor > 0) {
+                self.op_cursor -= 1;
+                root.invalidate();
+            }
+        },
+    }
 }
 
 pub fn inputUtf8(self: *DesignMode, utf8: []const u8) void {
@@ -291,7 +312,18 @@ pub fn render(
     {
         var y: i32 = layout.ops_pos.y;
         _ = &y;
-        for (self.ops.items) |op| {
+        for (self.ops.items, 0..) |op, op_index| {
+            if (op_index == self.op_cursor) {
+                const width = pxFromPt(render_scale, 10.0);
+                const right = layout.ops_pos.x - pxFromPt(render_scale, 9.0);
+                target.fillRect(theme.highlight, .{
+                    .left = right - width,
+                    .top = y,
+                    .right = right,
+                    .bottom = y + layout.ops_char_size.y,
+                });
+            }
+
             var render_writer: RenderWriter = .{
                 .target = &target,
                 .char_size = layout.ops_char_size,
