@@ -16,7 +16,9 @@ pub const MouseButtonState = enum { up, down };
 
 pub const global = struct {
     var mode: Mode = .view;
-    var design_mode: DesignMode = .{};
+    var design_mode: DesignMode = .{
+        .arena = std.heap.ArenaAllocator.init(std.heap.page_allocator),
+    };
 
     var font_weight: f32 = celltype.default_weight;
     pub var text: TextArray = TextArray.fromSlice("HiNZ0123") catch unreachable;
@@ -115,9 +117,9 @@ pub fn mouseButton(kind: MouseButtonKind, state: MouseButtonState, pos: XY(i32))
     }
 }
 
-pub fn drawText(target: root.RenderTarget, text_size: XY(u16), pos: XY(i32), text: []const u8) void {
+pub fn drawText(target: root.RenderTarget, text_size: XY(u16), pos: XY(i32), text: []const u8) i32 {
     // TODO: don't defer to the render target when we have enough characters to render text ourselves
-    target.drawText(text_size, pos, text);
+    return target.drawText(text_size, pos, text);
 }
 
 pub fn render(target: root.RenderTarget, scale: f32, render_size: XY(i32)) void {

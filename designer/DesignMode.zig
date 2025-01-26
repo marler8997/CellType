@@ -7,7 +7,8 @@ const celltype = @import("celltype");
 
 const XY = @import("xy.zig").XY;
 
-operations: std.ArrayListUnmanaged(celltype.design.Op) = .{},
+arena: std.heap.ArenaAllocator,
+ops: std.ArrayListUnmanaged(celltype.design.Op) = .{},
 
 cell_size: XY(u16) = .{ .x = 10, .y = 20 },
 cell_pixel_size: ?u32 = null,
@@ -16,11 +17,14 @@ layout: ?Layout = null,
 
 const Layout = struct {
     render_scale: f32,
-    cell_pixel_size: u32,
+    cell_size: XY(u16),
+    cell_pixel_size: i32,
     text_size: XY(u16),
     zoom_out_button: app.Rect,
     zoom_in_button: app.Rect,
-    grid_pos: XY(i32),
+    pixel_grid: app.Rect,
+    ops_pos: XY(i32),
+    ops_char_size: XY(i32),
 };
 
 const zoom_out_text = "Zoom Out";
@@ -30,9 +34,19 @@ fn pxFromPt(render_scale: f32, pt: f32) i32 {
     return @intFromFloat(@round(render_scale * pt));
 }
 
-pub fn getLayout(self: *DesignMode, render_scale: f32, cell_pixel_size: u32) *const Layout {
-    if (self.layout) |*layout| {
-        if (layout.render_scale == render_scale and layout.cell_pixel_size == cell_pixel_size) return layout;
+pub fn getLayout(self: *DesignMode, render_scale: f32, cell_pixel_size: i32) *const Layout {
+    updateLayout(&self.layout, render_scale, self.cell_size, cell_pixel_size);
+    return &(self.layout.?);
+}
+
+fn updateLayout(
+    layout_ref: *?Layout,
+    render_scale: f32,
+    cell_size: XY(u16),
+    cell_pixel_size: i32,
+) void {
+    if (layout_ref.*) |*layout| {
+        if (layout.render_scale == render_scale and layout.cell_size.x == cell_size.x and layout.cell_size.y == cell_size.y and layout.cell_pixel_size == cell_pixel_size) return;
     }
 
     const text_size: XY(u16) = .{
@@ -47,9 +61,12 @@ pub fn getLayout(self: *DesignMode, render_scale: f32, cell_pixel_size: u32) *co
     const grid_top: i32 = margin + button_height + pxFromPt(render_scale, 10.0);
 
     const zoom_in_left: i32 = margin + text_size.x * @as(i32, @intCast(zoom_out_text.len)) + pxFromPt(render_scale, 20.0);
+    const grid_line_size: i32 = pxFromPt(render_scale, 1.0);
+    const grid_right: i32 = margin + @as(i32, @intCast(cell_size.x)) * cell_pixel_size + @as(i32, @intCast(cell_size.x - 1)) * grid_line_size;
 
-    self.layout = .{
+    layout_ref.* = .{
         .render_scale = render_scale,
+        .cell_size = cell_size,
         .cell_pixel_size = cell_pixel_size,
         .text_size = text_size,
         .zoom_out_button = app.Rect.initSized(
@@ -64,14 +81,32 @@ pub fn getLayout(self: *DesignMode, render_scale: f32, cell_pixel_size: u32) *co
             zoom_in_left + text_size.x * @as(i32, @intCast(zoom_in_text.len)),
             text_size.y,
         ),
-        .grid_pos = .{ .x = margin, .y = grid_top },
+        .pixel_grid = .{
+            .left = margin,
+            .top = grid_top,
+            .right = grid_right,
+            .bottom = grid_top + cell_size.y * cell_pixel_size + (cell_size.y - 1) * grid_line_size,
+        },
+        .ops_pos = .{
+            .x = grid_right + pxFromPt(render_scale, 10.0),
+            .y = grid_top,
+        },
+        .ops_char_size = .{
+            .x = pxFromPt(render_scale, 10.0),
+            .y = pxFromPt(render_scale, 22.0),
+        },
     };
-    return &(self.layout.?);
+    updateLayout(layout_ref, render_scale, cell_size, cell_pixel_size);
 }
 
 pub fn inputUtf8(self: *DesignMode, utf8: []const u8) void {
-    _ = self;
-    _ = utf8;
+    if (std.mem.eql(u8, utf8, "n")) {
+        self.ops.append(
+            self.arena.allocator(),
+            .{ .op = .{ .stroke_vert = .{ .x = .{ .base = .center } } } },
+        ) catch |e| oom(e);
+        root.invalidate();
+    }
 }
 
 pub fn mouseButton(
@@ -114,25 +149,25 @@ pub fn render(
     target.fillRect(.bg, .{ .left = 0, .top = 0, .right = render_size.x, .bottom = render_size.y });
     const layout = self.getLayout(render_scale, @intCast(cell_pixel_size));
 
-    target.drawText(layout.text_size, layout.zoom_out_button.topLeft(), zoom_out_text);
-    target.drawText(layout.text_size, layout.zoom_in_button.topLeft(), zoom_in_text);
+    _ = app.drawText(target, layout.text_size, layout.zoom_out_button.topLeft(), zoom_out_text);
+    _ = app.drawText(target, layout.text_size, layout.zoom_in_button.topLeft(), zoom_in_text);
 
     const grid_line_size: i32 = pxFromPt(render_scale, 1.0);
 
     {
-        var y: i32 = layout.grid_pos.y;
+        var y: i32 = layout.pixel_grid.top;
         for (0..@intCast(self.cell_size.y)) |row| {
             if (row > 0) {
                 target.fillRect(.grid_line, .{
-                    .left = layout.grid_pos.x,
+                    .left = layout.pixel_grid.left,
                     .top = y,
-                    .right = layout.grid_pos.x + self.cell_size.x * cell_pixel_size + (self.cell_size.x - 1) * grid_line_size,
+                    .right = layout.pixel_grid.right,
                     .bottom = y + grid_line_size,
                 });
                 y += grid_line_size;
             }
 
-            var x: i32 = layout.grid_pos.x;
+            var x: i32 = layout.pixel_grid.left;
             for (0..@intCast(self.cell_size.x)) |col| {
                 if (col > 0) {
                     target.fillRect(.grid_line, .{
@@ -154,4 +189,47 @@ pub fn render(
             y += cell_pixel_size;
         }
     }
+
+    {
+        var y: i32 = layout.ops_pos.y;
+        _ = &y;
+        for (self.ops.items) |op| {
+            var render_writer: RenderWriter = .{
+                .target = &target,
+                .char_size = layout.ops_char_size,
+                .pos = .{
+                    .x = layout.ops_pos.x,
+                    .y = y,
+                },
+            };
+            const writer = render_writer.writer();
+            writer.print("{}", .{op}) catch |e| switch (e) {};
+            y += layout.ops_char_size.y;
+        }
+    }
+}
+
+const RenderWriter = struct {
+    target: *const root.RenderTarget,
+    char_size: XY(i32),
+    pos: XY(i32),
+
+    pub const Writer = std.io.Writer(*RenderWriter, error{}, write);
+    pub fn writer(self: *RenderWriter) Writer {
+        return .{ .context = self };
+    }
+    fn write(self: *RenderWriter, bytes: []const u8) error{}!usize {
+        const glyphs_rendered = app.drawText(
+            self.target.*,
+            .{ .x = @intCast(self.char_size.x), .y = @intCast(self.char_size.y) },
+            self.pos,
+            bytes,
+        );
+        self.pos.x += self.char_size.x * glyphs_rendered;
+        return bytes.len;
+    }
+};
+
+pub fn oom(e: error{OutOfMemory}) noreturn {
+    @panic(@errorName(e));
 }

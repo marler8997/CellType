@@ -1,3 +1,5 @@
+const std = @import("std");
+
 pub const BoundaryBaseX = enum {
     /// center of uppercase left stroke
     uppercase_left,
@@ -32,6 +34,22 @@ pub const BoundaryX = struct {
     base: BoundaryBaseX,
     between: ?BetweenX = null,
     half_stroke_adjust: i8 = 0,
+    pub fn format(
+        self: BoundaryX,
+        comptime fmt: []const u8,
+        options: std.fmt.FormatOptions,
+        writer: anytype,
+    ) !void {
+        _ = fmt;
+        _ = options;
+        try writer.print("{s}", .{@tagName(self.base)});
+        if (self.between) |between| {
+            try writer.print(" (between {})", .{between});
+        }
+        if (self.half_stroke_adjust != 0) {
+            try writer.print(" adjust {}", .{self.half_stroke_adjust});
+        }
+    }
 };
 pub const BoundaryY = struct {
     base: BoundaryBaseY,
@@ -63,6 +81,16 @@ pub const StrokeVert = struct {
     // TODO: we might want this at some point if we want strokes
     //       that grow differently based on the stroke size
     //balance: StrokeBalance,
+    pub fn format(
+        self: StrokeVert,
+        comptime fmt: []const u8,
+        options: std.fmt.FormatOptions,
+        writer: anytype,
+    ) !void {
+        _ = fmt;
+        _ = options;
+        try writer.print("{}", .{self.x});
+    }
 };
 pub const StrokeHorz = struct {
     y: BoundaryY,
@@ -108,4 +136,22 @@ pub const Op = struct {
         stroke_dot: BoundaryPoint,
         stroke_curve: StrokeCurve,
     },
+    pub fn format(
+        self: Op,
+        comptime fmt: []const u8,
+        options: std.fmt.FormatOptions,
+        writer: anytype,
+    ) !void {
+        _ = fmt;
+        _ = options;
+        switch (self.condition) {
+            .yes => {},
+            .serif => try writer.writeAll("if(serif) "),
+        }
+        switch (self.op) {
+            .todo => try writer.writeAll("todo"),
+            .stroke_vert => |stroke_vert| try writer.print("stroke_vert {}", .{stroke_vert}),
+            else => @panic("todo"),
+        }
+    }
 };

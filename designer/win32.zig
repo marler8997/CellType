@@ -430,7 +430,7 @@ pub const RenderTarget = struct {
         d2d.target.ID2D1RenderTarget.FillRectangle(&r, c);
     }
     // TODO: remove this method when our text rendering is ready to do the UI
-    pub fn drawText(self: RenderTarget, text_size: XY(u16), pos: XY(i32), text: []const u8) void {
+    pub fn drawText(self: RenderTarget, text_size: XY(u16), pos: XY(i32), text: []const u8) i32 {
         _ = self;
         const d2d = &(global.maybe_d2d.?);
 
@@ -439,16 +439,21 @@ pub const RenderTarget = struct {
             const hr = global.dwrite_factory.CreateTextFormat(
                 win32.L("Segoe UI"),
                 null,
-                win32.DWRITE_FONT_WEIGHT_NORMAL,
-                win32.DWRITE_FONT_STYLE_NORMAL,
-                win32.DWRITE_FONT_STRETCH_NORMAL,
-                @as(f32, @floatFromInt(text_size.y)) * 0.8,
+                .NORMAL,
+                .NORMAL,
+                .NORMAL,
+                @as(f32, @floatFromInt(text_size.y)) * 0.85,
                 win32.L("en-us"),
                 &text_format,
             );
             if (hr < 0) win32.panicHresult("CreateTextFormat", hr);
         }
         defer _ = text_format.IUnknown.Release();
+
+        {
+            const hr = text_format.SetTextAlignment(.CENTER);
+            if (hr < 0) win32.panicHresult("SetTextAlignment", hr);
+        }
 
         var codepoint_index: i32 = 0;
         var offset: usize = 0;
@@ -477,6 +482,7 @@ pub const RenderTarget = struct {
                 .NATURAL,
             );
         }
+        return codepoint_index;
     }
 
     pub const Bitmap = struct {
