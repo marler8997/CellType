@@ -10,93 +10,145 @@ const XY = @import("xy.zig").XY;
 arena: std.heap.ArenaAllocator,
 ops: std.ArrayListUnmanaged(celltype.design.Op) = .{},
 
-cell_size: XY(u16) = .{ .x = 10, .y = 20 },
-cell_pixel_size: ?u32 = null,
-
+// if true, will add the default views on the first render if there are no views
+add_default_views: bool = true,
 layout: ?Layout = null,
+view_inputs: std.ArrayListUnmanaged(ViewInput) = .{},
 
-const Layout = struct {
-    render_scale: f32,
+const ViewInput = struct {
+    //position: XY(i32),
     cell_size: XY(u16),
     cell_pixel_size: i32,
-    text_size: XY(u16),
+};
+
+const ViewLayout = struct {
+    //position: XY(i32),
+    cell_size: XY(u16),
+    cell_pixel_size: i32,
     zoom_out_button: app.Rect,
     zoom_in_button: app.Rect,
     pixel_grid: app.Rect,
-    ops_pos: XY(i32),
-    ops_char_size: XY(i32),
 };
 
-const zoom_out_text = "Zoom Out";
-const zoom_in_text = "Zoom In";
+const Layout = struct {
+    render_scale: f32,
+    text_size: XY(u16),
+    ops_pos: XY(i32),
+    ops_char_size: XY(i32),
+    views: std.ArrayListUnmanaged(ViewLayout),
+};
+
+const zoom_out_text = "-";
+const zoom_in_text = "+";
 
 fn pxFromPt(render_scale: f32, pt: f32) i32 {
     return @intFromFloat(@round(render_scale * pt));
 }
 
-pub fn getLayout(self: *DesignMode, render_scale: f32, cell_pixel_size: i32) *const Layout {
-    updateLayout(&self.layout, render_scale, self.cell_size, cell_pixel_size);
+pub fn getLayout(self: *DesignMode, render_scale: f32) *const Layout {
+    _ = updateLayout(self.arena.allocator(), &self.layout, render_scale, self.view_inputs.items);
     return &(self.layout.?);
 }
 
 fn updateLayout(
+    allocator: std.mem.Allocator,
     layout_ref: *?Layout,
     render_scale: f32,
-    cell_size: XY(u16),
-    cell_pixel_size: i32,
-) void {
-    if (layout_ref.*) |*layout| {
-        if (layout.render_scale == render_scale and layout.cell_size.x == cell_size.x and layout.cell_size.y == cell_size.y and layout.cell_pixel_size == cell_pixel_size) return;
+    view_inputs: []const ViewInput,
+) bool {
+    need_update: {
+        if (layout_ref.*) |*layout| {
+            if (layout.render_scale != render_scale) break :need_update;
+            if (layout.views.items.len != view_inputs.len) break :need_update;
+            for (layout.views.items, view_inputs) |*view, *view_input| {
+                //if (!view.position.eql(view_input.position)) break :need_update;
+                if (!view.cell_size.eql(view_input.cell_size)) break :need_update;
+                if (view.cell_pixel_size != view_input.cell_pixel_size) break :need_update;
+            }
+            // we already up-to-date
+            return false;
+        }
     }
 
     const text_size: XY(u16) = .{
         .x = @intCast(pxFromPt(render_scale, 10.0)),
         .y = @intCast(pxFromPt(render_scale, 20.0)),
     };
-
-    const margin: i32 = pxFromPt(render_scale, 10.0);
+    const window_margin: i32 = pxFromPt(render_scale, 10.0);
 
     const button_padding: i32 = pxFromPt(render_scale, 10.0);
     const button_height: i32 = text_size.y + 2 * button_padding;
-    const grid_top: i32 = margin + button_height + pxFromPt(render_scale, 10.0);
 
-    const zoom_in_left: i32 = margin + text_size.x * @as(i32, @intCast(zoom_out_text.len)) + pxFromPt(render_scale, 20.0);
+    var views: std.ArrayListUnmanaged(ViewLayout) = blk: {
+        if (layout_ref.*) |*layout| {
+            const views_copy = layout.views;
+            layout.views = undefined;
+            break :blk views_copy;
+        }
+        break :blk .{};
+    };
+    views.ensureTotalCapacity(allocator, view_inputs.len) catch |e| oom(e);
+    views.clearRetainingCapacity();
+
     const grid_line_size: i32 = pxFromPt(render_scale, 1.0);
-    const grid_right: i32 = margin + @as(i32, @intCast(cell_size.x)) * cell_pixel_size + @as(i32, @intCast(cell_size.x - 1)) * grid_line_size;
+
+    var view_y: i32 = window_margin;
+
+    for (view_inputs) |*view_input| {
+        const zoom_top = view_y;
+        view_y += button_height + pxFromPt(render_scale, 10);
+        const zoom_in_left: i32 = window_margin + text_size.x * @as(i32, @intCast(zoom_out_text.len)) + pxFromPt(render_scale, 20.0);
+        const grid_right: i32 = window_margin + @as(i32, @intCast(view_input.cell_size.x)) * view_input.cell_pixel_size + @as(i32, @intCast(view_input.cell_size.x - 1)) * grid_line_size;
+
+        const grid_top = view_y;
+        const grid_bottom = grid_top + view_input.cell_size.y * view_input.cell_pixel_size + (view_input.cell_size.y - 1) * grid_line_size;
+        view_y = grid_bottom + pxFromPt(render_scale, 10);
+
+        views.appendAssumeCapacity(.{
+            .cell_size = view_input.cell_size,
+            .cell_pixel_size = view_input.cell_pixel_size,
+            .zoom_out_button = .{
+                .left = window_margin,
+                .top = zoom_top,
+                .right = window_margin + text_size.x * @as(i32, @intCast(zoom_in_text.len)),
+                .bottom = zoom_top + text_size.y,
+            },
+            .zoom_in_button = .{
+                .left = zoom_in_left,
+                .top = zoom_top,
+                .right = zoom_in_left + text_size.x * @as(i32, @intCast(zoom_in_text.len)),
+                .bottom = zoom_top + text_size.y,
+            },
+            .pixel_grid = .{
+                .left = window_margin,
+                .top = grid_top,
+                .right = grid_right,
+                .bottom = grid_bottom,
+            },
+        });
+    }
+
+    var max_grid_right: i32 = 0;
+    for (views.items) |*view| {
+        max_grid_right = @max(max_grid_right, view.zoom_in_button.right);
+        max_grid_right = @max(max_grid_right, view.pixel_grid.right);
+    }
 
     layout_ref.* = .{
         .render_scale = render_scale,
-        .cell_size = cell_size,
-        .cell_pixel_size = cell_pixel_size,
         .text_size = text_size,
-        .zoom_out_button = app.Rect.initSized(
-            margin,
-            margin,
-            text_size.x * @as(i32, @intCast(zoom_in_text.len)),
-            text_size.y,
-        ),
-        .zoom_in_button = app.Rect.initSized(
-            zoom_in_left,
-            margin,
-            zoom_in_left + text_size.x * @as(i32, @intCast(zoom_in_text.len)),
-            text_size.y,
-        ),
-        .pixel_grid = .{
-            .left = margin,
-            .top = grid_top,
-            .right = grid_right,
-            .bottom = grid_top + cell_size.y * cell_pixel_size + (cell_size.y - 1) * grid_line_size,
-        },
+        .views = views,
         .ops_pos = .{
-            .x = grid_right + pxFromPt(render_scale, 10.0),
-            .y = grid_top,
+            .x = max_grid_right + pxFromPt(render_scale, 10.0),
+            .y = window_margin,
         },
         .ops_char_size = .{
             .x = pxFromPt(render_scale, 10.0),
             .y = pxFromPt(render_scale, 22.0),
         },
     };
-    updateLayout(layout_ref, render_scale, cell_size, cell_pixel_size);
+    std.debug.assert(!updateLayout(allocator, layout_ref, render_scale, view_inputs));
+    return true;
 }
 
 pub fn inputUtf8(self: *DesignMode, utf8: []const u8) void {
@@ -120,14 +172,16 @@ pub fn mouseButton(
         .left => switch (state) {
             .up => {},
             .down => {
-                if (layout.zoom_out_button.containsPoint(point)) {
-                    const cell_pixel_size = self.cell_pixel_size orelse return;
-                    self.cell_pixel_size = @max(1, cell_pixel_size - 1);
-                    root.invalidate();
-                } else if (layout.zoom_in_button.containsPoint(point)) {
-                    const cell_pixel_size = self.cell_pixel_size orelse return;
-                    self.cell_pixel_size = cell_pixel_size + 1;
-                    root.invalidate();
+                if (self.view_inputs.items.len != layout.views.items.len) return;
+                for (self.view_inputs.items, layout.views.items) |*view_input, *view| {
+                    if (view.zoom_out_button.containsPoint(point)) {
+                        if (view_input.cell_pixel_size <= 1) return;
+                        view_input.cell_pixel_size = view_input.cell_pixel_size - 1;
+                        return root.invalidate();
+                    } else if (view.zoom_in_button.containsPoint(point)) {
+                        view_input.cell_pixel_size = view_input.cell_pixel_size + 1;
+                        return root.invalidate();
+                    }
                 }
             },
         },
@@ -140,53 +194,64 @@ pub fn render(
     render_scale: f32,
     render_size: XY(i32),
 ) void {
-    if (self.cell_pixel_size == null) {
-        self.cell_pixel_size = @intFromFloat(@round(render_scale * 10.0));
+    _ = render_size;
+    if (self.add_default_views) {
+        self.add_default_views = false;
+        if (self.view_inputs.items.len == 0) {
+            const cell_pixel_size: i32 = @intFromFloat(@round(render_scale * 10.0));
+            self.view_inputs.append(self.arena.allocator(), .{
+                .cell_size = .{ .x = 10, .y = 20 },
+                .cell_pixel_size = cell_pixel_size,
+            }) catch |e| oom(e);
+            self.view_inputs.append(self.arena.allocator(), .{
+                .cell_size = .{ .x = 20, .y = 36 },
+                .cell_pixel_size = cell_pixel_size,
+            }) catch |e| oom(e);
+        }
     }
-    const cell_pixel_size: i32 = @intCast(self.cell_pixel_size.?);
 
-    // TODO: currently this causes overdraw
-    target.fillRect(.bg, .{ .left = 0, .top = 0, .right = render_size.x, .bottom = render_size.y });
-    const layout = self.getLayout(render_scale, @intCast(cell_pixel_size));
+    const layout = self.getLayout(render_scale);
 
-    _ = app.drawText(target, layout.text_size, layout.zoom_out_button.topLeft(), zoom_out_text);
-    _ = app.drawText(target, layout.text_size, layout.zoom_in_button.topLeft(), zoom_in_text);
+    for (layout.views.items) |*view| {
+        _ = app.drawText(target, layout.text_size, view.zoom_out_button.topLeft(), zoom_out_text);
+        _ = app.drawText(target, layout.text_size, view.zoom_in_button.topLeft(), zoom_in_text);
 
-    const grid_line_size: i32 = pxFromPt(render_scale, 1.0);
+        const grid_line_size: i32 = pxFromPt(render_scale, 1.0);
 
-    {
-        var y: i32 = layout.pixel_grid.top;
-        for (0..@intCast(self.cell_size.y)) |row| {
-            if (row > 0) {
-                target.fillRect(.grid_line, .{
-                    .left = layout.pixel_grid.left,
-                    .top = y,
-                    .right = layout.pixel_grid.right,
-                    .bottom = y + grid_line_size,
-                });
-                y += grid_line_size;
-            }
-
-            var x: i32 = layout.pixel_grid.left;
-            for (0..@intCast(self.cell_size.x)) |col| {
-                if (col > 0) {
+        {
+            var y: i32 = view.pixel_grid.top;
+            for (0..@intCast(view.cell_size.y)) |row| {
+                if (row > 0) {
                     target.fillRect(.grid_line, .{
+                        .left = view.pixel_grid.left,
+                        .top = y,
+                        .right = view.pixel_grid.right,
+                        .bottom = y + grid_line_size,
+                    });
+                    y += grid_line_size;
+                }
+
+                var x: i32 = view.pixel_grid.left;
+                for (0..@intCast(view.cell_size.x)) |col| {
+                    if (col > 0) {
+                        target.fillRect(.grid_line, .{
+                            .left = x,
+                            .top = y,
+                            .right = x + grid_line_size,
+                            .bottom = y + view.cell_pixel_size,
+                        });
+                        x += grid_line_size;
+                    }
+                    target.fillRect(.black, .{
                         .left = x,
                         .top = y,
-                        .right = x + grid_line_size,
-                        .bottom = y + cell_pixel_size,
+                        .right = x + view.cell_pixel_size,
+                        .bottom = y + view.cell_pixel_size,
                     });
-                    x += grid_line_size;
+                    x += view.cell_pixel_size;
                 }
-                target.fillRect(.black, .{
-                    .left = x,
-                    .top = y,
-                    .right = x + cell_pixel_size,
-                    .bottom = y + cell_pixel_size,
-                });
-                x += cell_pixel_size;
+                y += view.cell_pixel_size;
             }
-            y += cell_pixel_size;
         }
     }
 

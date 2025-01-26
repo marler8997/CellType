@@ -465,7 +465,6 @@ pub const RenderTarget = struct {
 
             const text_wide = [1:0]u16{@truncate(codepoint)};
             const left = pos.x + text_size.x * codepoint_index;
-            std.log.info("rendering codepoint {} x={}", .{ codepoint, left });
             const rect: win32.D2D_RECT_F = .{
                 .left = @floatFromInt(left),
                 .top = @floatFromInt(pos.y),
