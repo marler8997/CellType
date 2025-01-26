@@ -417,7 +417,7 @@ fn d2dFromRgb8(rgb: Rgb8) win32.D2D_COLOR_F {
 pub const Rect = win32.RECT;
 
 pub const RenderTarget = struct {
-    pub fn fillRect(self: RenderTarget, color: theme.Color, rect: win32.RECT) void {
+    pub fn fillRect(self: RenderTarget, color: theme.Color, rect: app.Rect) void {
         _ = self;
         const d2d = &(global.maybe_d2d.?);
         const r: win32.D2D_RECT_F = .{
@@ -453,6 +453,10 @@ pub const RenderTarget = struct {
         {
             const hr = text_format.SetTextAlignment(.CENTER);
             if (hr < 0) win32.panicHresult("SetTextAlignment", hr);
+        }
+        {
+            const hr = text_format.SetParagraphAlignment(win32.DWRITE_PARAGRAPH_ALIGNMENT_CENTER);
+            if (hr < 0) return win32.panicHresult("SetParagraphAlignment", hr);
         }
 
         var codepoint_index: i32 = 0;

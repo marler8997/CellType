@@ -14,6 +14,7 @@ ops: std.ArrayListUnmanaged(celltype.design.Op) = .{},
 add_default_views: bool = true,
 layout: ?Layout = null,
 view_inputs: std.ArrayListUnmanaged(ViewInput) = .{},
+grayscale: std.ArrayListUnmanaged(u8) = .{},
 
 const ViewInput = struct {
     //position: XY(i32),
@@ -76,8 +77,9 @@ fn updateLayout(
     };
     const window_margin: i32 = pxFromPt(render_scale, 10.0);
 
-    const button_padding: i32 = pxFromPt(render_scale, 10.0);
-    const button_height: i32 = text_size.y + 2 * button_padding;
+    const zoom_button_width: i32 = pxFromPt(render_scale, 20);
+    const button_padding_y: i32 = pxFromPt(render_scale, 1.0);
+    const button_height: i32 = text_size.y + 2 * button_padding_y;
 
     var views: std.ArrayListUnmanaged(ViewLayout) = blk: {
         if (layout_ref.*) |*layout| {
@@ -96,11 +98,12 @@ fn updateLayout(
 
     for (view_inputs) |*view_input| {
         const zoom_top = view_y;
-        view_y += button_height + pxFromPt(render_scale, 10);
-        const zoom_in_left: i32 = window_margin + text_size.x * @as(i32, @intCast(zoom_out_text.len)) + pxFromPt(render_scale, 20.0);
+        view_y += button_height;
+        const zoom_out_right: i32 = window_margin + zoom_button_width;
+        const zoom_in_left: i32 = zoom_out_right + pxFromPt(render_scale, 10);
         const grid_right: i32 = window_margin + @as(i32, @intCast(view_input.cell_size.x)) * view_input.cell_pixel_size + @as(i32, @intCast(view_input.cell_size.x - 1)) * grid_line_size;
 
-        const grid_top = view_y;
+        const grid_top = view_y + pxFromPt(render_scale, 10);
         const grid_bottom = grid_top + view_input.cell_size.y * view_input.cell_pixel_size + (view_input.cell_size.y - 1) * grid_line_size;
         view_y = grid_bottom + pxFromPt(render_scale, 10);
 
@@ -110,14 +113,14 @@ fn updateLayout(
             .zoom_out_button = .{
                 .left = window_margin,
                 .top = zoom_top,
-                .right = window_margin + text_size.x * @as(i32, @intCast(zoom_in_text.len)),
-                .bottom = zoom_top + text_size.y,
+                .right = zoom_out_right,
+                .bottom = zoom_top + button_height,
             },
             .zoom_in_button = .{
                 .left = zoom_in_left,
                 .top = zoom_top,
-                .right = zoom_in_left + text_size.x * @as(i32, @intCast(zoom_in_text.len)),
-                .bottom = zoom_top + text_size.y,
+                .right = zoom_in_left + zoom_button_width,
+                .bottom = zoom_top + button_height,
             },
             .pixel_grid = .{
                 .left = window_margin,
@@ -213,8 +216,10 @@ pub fn render(
     const layout = self.getLayout(render_scale);
 
     for (layout.views.items) |*view| {
-        _ = app.drawText(target, layout.text_size, view.zoom_out_button.topLeft(), zoom_out_text);
-        _ = app.drawText(target, layout.text_size, view.zoom_in_button.topLeft(), zoom_in_text);
+        target.fillRect(.button_bg, view.zoom_out_button);
+        _ = app.drawTextCentered(target, layout.text_size, view.zoom_out_button.center(), zoom_out_text);
+        target.fillRect(.button_bg, view.zoom_in_button);
+        _ = app.drawTextCentered(target, layout.text_size, view.zoom_in_button.center(), zoom_in_text);
 
         const grid_line_size: i32 = pxFromPt(render_scale, 1.0);
 

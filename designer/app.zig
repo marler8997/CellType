@@ -105,6 +105,14 @@ pub const Rect = struct {
     pub fn topLeft(self: Rect) XY(i32) {
         return .{ .x = self.left, .y = self.top };
     }
+    pub fn center(self: Rect) XY(f32) {
+        const left: f32 = @floatFromInt(self.left);
+        const top: f32 = @floatFromInt(self.top);
+        return .{
+            .x = left + @as(f32, @floatFromInt(self.right - self.left)) / 2,
+            .y = top + @as(f32, @floatFromInt(self.bottom - self.top)) / 2,
+        };
+    }
     pub fn containsPoint(self: Rect, p: XY(i32)) bool {
         return p.x >= self.left and p.x < self.right and p.y >= self.top and p.y < self.bottom;
     }
@@ -117,9 +125,29 @@ pub fn mouseButton(kind: MouseButtonKind, state: MouseButtonState, pos: XY(i32))
     }
 }
 
-pub fn drawText(target: root.RenderTarget, text_size: XY(u16), pos: XY(i32), text: []const u8) i32 {
+pub fn countGlyphs(text: []const u8) usize {
+    var glyph_count: usize = 0;
+    var offset: usize = 0;
+    while (offset < text.len) : (glyph_count += 1) {
+        const utf8_len = std.unicode.utf8ByteSequenceLength(text[offset]) catch @panic("invalid utf8");
+        if (utf8_len > text.len) @panic("utf8 truncated");
+        _ = std.unicode.utf8Decode(text[offset..][0..utf8_len]) catch @panic("invalid utf8");
+        offset += utf8_len;
+    }
+    return glyph_count;
+}
+
+pub fn drawText(target: root.RenderTarget, text_cell_size: XY(u16), pos: XY(i32), text: []const u8) i32 {
     // TODO: don't defer to the render target when we have enough characters to render text ourselves
-    return target.drawText(text_size, pos, text);
+    return target.drawText(text_cell_size, pos, text);
+}
+pub fn drawTextCentered(target: root.RenderTarget, text_cell_size: XY(u16), center: XY(f32), text: []const u8) i32 {
+    const glyph_count = countGlyphs(text);
+    const full_text_width: i32 = @as(i32, @intCast(text_cell_size.x)) * @as(i32, @intCast(glyph_count));
+    return drawText(target, text_cell_size, .{
+        .x = @intFromFloat(@round(center.x - @as(f32, @floatFromInt(full_text_width)) / 2)),
+        .y = @intFromFloat(@round(center.y - @as(f32, @floatFromInt(text_cell_size.y)) / 2)),
+    }, text);
 }
 
 pub fn render(target: root.RenderTarget, scale: f32, render_size: XY(i32)) void {
