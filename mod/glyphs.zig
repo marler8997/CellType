@@ -159,6 +159,16 @@ pub const H = lex.parseOps(
     \\stroke vert uppercase_right;
     \\stroke horz uppercase_center;
 );
+pub const L = lex.parseOps(
+    \\clip left=uppercase_left-1 right=uppercase_right+1 top=uppercase_top-1 bottom=base+1;
+    \\stroke vert uppercase_left;
+    \\stroke horz base;
+);
+pub const T = lex.parseOps(
+    \\clip left=uppercase_left-1 right=uppercase_right+1 top=uppercase_top-1 bottom=base+1;
+    \\stroke vert center;
+    \\stroke horz uppercase_top;
+);
 
 pub const i = lex.parseOps(
     \\clip bottom=base+1;
@@ -166,6 +176,7 @@ pub const i = lex.parseOps(
     \\clip top=lowercase_top-1;
     \\stroke vert center;
 );
+
 pub const N = [_]Op{
     .{ .op = .{ .clip = .{
         .left = .{ .base = .uppercase_left, .half_stroke_adjust = -1 },
