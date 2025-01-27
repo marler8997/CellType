@@ -245,11 +245,31 @@ pub const Op = struct {
         switch (self.op) {
             .todo => try writer.writeAll("todo"),
             .clip => |c| try writer.print("clip {}", .{c}),
-            .stroke_vert => |s| try writer.print("stroke_vert {}", .{s}),
-            .stroke_horz => |s| try writer.print("stroke_horz {}", .{s}),
-            .stroke_diag => |s| try writer.print("stroke_diag {}", .{s}),
-            .stroke_dot => |s| try writer.print("stroke_dot {}", .{s}),
-            .stroke_curve => |s| try writer.print("stroke_curve {}", .{s}),
+            .stroke_vert => |s| try writer.print("stroke vert {}", .{s}),
+            .stroke_horz => |s| try writer.print("stroke horz {}", .{s}),
+            .stroke_diag => |s| try writer.print("stroke diag {}", .{s}),
+            .stroke_dot => |s| try writer.print("stroke dot {}", .{s}),
+            .stroke_curve => |s| try writer.print("stroke curve {}", .{s}),
         }
     }
 };
+
+pub const Dimension = enum { x, y };
+pub fn BoundaryBase(dimension: Dimension) type {
+    return switch (dimension) {
+        .x => BoundaryBaseX,
+        .y => BoundaryBaseY,
+    };
+}
+pub fn Boundary(dimension: Dimension) type {
+    return switch (dimension) {
+        .x => BoundaryX,
+        .y => BoundaryY,
+    };
+}
+pub fn Between(dimension: Dimension) type {
+    return switch (dimension) {
+        .x => BetweenX,
+        .y => BetweenY,
+    };
+}

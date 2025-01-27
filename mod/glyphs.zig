@@ -1,4 +1,5 @@
 const design = @import("design.zig");
+const lex = @import("lex.zig");
 
 const Op = design.Op;
 
@@ -149,27 +150,22 @@ pub const @"3" = [_]Op{
     } },
 };
 
-pub const H = [_]Op{
-    .{ .op = .{ .clip = .{
-        .left = .{ .base = .uppercase_left, .half_stroke_adjust = -1 },
-        .right = .{ .base = .uppercase_right, .half_stroke_adjust = 1 },
-        .top = .{ .base = .uppercase_top, .half_stroke_adjust = -1 },
-        .bottom = .{ .base = .baseline_stroke, .half_stroke_adjust = 1 },
-    } } },
-    .{ .op = .{ .stroke_vert = .{ .x = .{ .base = .uppercase_left } } } },
-    .{ .op = .{ .stroke_vert = .{ .x = .{ .base = .uppercase_right } } } },
-    .{ .op = .{ .stroke_horz = .{ .y = .{ .base = .uppercase_center } } } },
-};
-pub const i = [_]Op{
-    .{ .op = .{ .clip = .{
-        .left = .{ .base = .center, .half_stroke_adjust = -1 },
-        .right = .{ .base = .center, .half_stroke_adjust = 1 },
-        .bottom = .{ .base = .baseline_stroke, .half_stroke_adjust = 1 },
-    } } },
-    .{ .op = .{ .stroke_dot = .{ .x = .{ .base = .center }, .y = .{ .base = .lowercase_dot } } } },
-    .{ .op = .{ .clip = .{ .top = .{ .base = .lowercase_top, .half_stroke_adjust = -1 } } } },
-    .{ .op = .{ .stroke_vert = .{ .x = .{ .base = .center } } } },
-};
+pub const H = lex.parseOps(
+    \\clip
+    \\    left=uppercase_left-1 right=uppercase_right+1
+    \\    top=uppercase_top-1 bottom=baseline_stroke+1
+    \\;
+    \\stroke vert uppercase_left;
+    \\stroke vert uppercase_right;
+    \\stroke horz uppercase_center;
+);
+
+pub const i = lex.parseOps(
+    \\clip bottom=baseline_stroke+1;
+    \\stroke dot center lowercase_dot;
+    \\clip top=lowercase_top-1;
+    \\stroke vert center;
+);
 pub const N = [_]Op{
     .{ .op = .{ .clip = .{
         .left = .{ .base = .uppercase_left, .half_stroke_adjust = -1 },
