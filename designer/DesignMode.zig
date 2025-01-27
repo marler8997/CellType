@@ -9,6 +9,8 @@ const theme = @import("theme.zig");
 const XY = @import("xy.zig").XY;
 
 arena: std.heap.ArenaAllocator,
+file: ?[]const u8 = null,
+file_error: ?[]const u8 = null,
 ops: std.ArrayListUnmanaged(celltype.design.Op) = .{},
 op_cursor: usize = 0,
 
@@ -56,6 +58,75 @@ const zoom_in_text = "+";
 
 fn pxFromPt(render_scale: f32, pt: f32) i32 {
     return @intFromFloat(@round(render_scale * pt));
+}
+
+pub fn setDesignFile(self: *DesignMode, file: []const u8) void {
+    self.file = file;
+    self.add_default_ops = false;
+}
+
+pub fn reloadFile(self: *DesignMode) void {
+    const file = self.file orelse return;
+
+    std.log.info("reloading design file...", .{});
+    root.invalidate();
+    if (self.file_error) |e| {
+        self.arena.allocator().free(e);
+        self.file_error = null;
+    }
+
+    var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+    defer arena.deinit();
+    const content = blk: {
+        const f = std.fs.cwd().openFile(file, .{}) catch |e| {
+            self.setFileError("error: open '{s}' failed with {s}", .{ file, @errorName(e) });
+            return;
+        };
+        defer f.close();
+        break :blk f.readToEndAlloc(arena.allocator(), std.math.maxInt(usize)) catch |e| {
+            self.setFileError("error: read '{s}' failed with {s}", .{ file, @errorName(e) });
+            return;
+        };
+    };
+    defer arena.allocator().free(content);
+
+    self.ops.clearRetainingCapacity();
+    var offset: usize = 0;
+    while (offset < content.len) {
+        var err: celltype.lex.Error = undefined;
+        const op, offset = (celltype.lex.parseOp(content, &err, offset) catch switch (err) {
+            .unexpected_token => |token| return self.setFileParseError(
+                file,
+                content,
+                "unexpected token '{s}' at offset {}",
+                .{ token.fmt(content), token.start },
+            ),
+            else => return self.setFileParseError(file, content, "???", .{}),
+        }) orelse break;
+        self.ops.append(self.arena.allocator(), op) catch |e| oom(e);
+    }
+}
+
+fn setFileError(self: *DesignMode, comptime fmt: []const u8, args: anytype) void {
+    if (self.file_error) |e| {
+        self.arena.allocator().free(e);
+        self.file_error = null;
+    }
+    self.file_error = std.fmt.allocPrint(self.arena.allocator(), fmt, args) catch |e| oom(e);
+    root.invalidate();
+}
+
+fn setFileParseError(
+    self: *DesignMode,
+    file: []const u8,
+    content: []const u8,
+    comptime fmt: []const u8,
+    args: anytype,
+) void {
+    self.setFileError(
+        "error in file '{s}'\n\n" ++ fmt ++ "\n\n------------------------------\n{s}\n------------------------------\n",
+        .{file} ++ args ++ .{content},
+    );
 }
 
 pub fn getLayout(self: *DesignMode, render_scale: f32) *const Layout {
@@ -222,7 +293,9 @@ fn getDefault(op: celltype.design.Op2Tag) celltype.design.Op {
 }
 
 pub fn inputUtf8(self: *DesignMode, utf8: []const u8) void {
-    if (std.mem.eql(u8, utf8, "n")) {
+    if (std.mem.eql(u8, utf8, "r")) {
+        self.reloadFile();
+    } else if (std.mem.eql(u8, utf8, "n")) {
         self.ops.append(
             self.arena.allocator(),
             getDefault(.stroke_vert),
@@ -264,7 +337,6 @@ pub fn render(
     render_scale: f32,
     render_size: XY(i32),
 ) void {
-    _ = render_size;
     if (self.add_default_views) {
         self.add_default_views = false;
         if (self.view_inputs.items.len == 0) {
@@ -382,6 +454,22 @@ pub fn render(
             const writer = render_writer.writer();
             writer.print("{}", .{op}) catch |e| switch (e) {};
             y += layout.ops_char_size.y;
+        }
+    }
+
+    if (self.file_error) |err| {
+        const margin = pxFromPt(render_scale, 10);
+        target.fillRect(.overlay_bg, .{
+            .left = margin,
+            .top = margin,
+            .right = render_size.x - margin,
+            .bottom = render_size.y - margin,
+        });
+        var line_it = std.mem.splitScalar(u8, err, '\n');
+        var y: i32 = margin;
+        while (line_it.next()) |line| {
+            _ = app.drawText(target, layout.text_size, .{ .x = margin, .y = y }, line);
+            y += layout.text_size.y;
         }
     }
 }

@@ -5,6 +5,7 @@ const std = @import("std");
 const curve = @import("curve.zig");
 pub const design = @import("design.zig");
 pub const glyphs = @import("glyphs.zig");
+pub const lex = @import("lex.zig");
 
 const PixelBoundary = @import("PixelBoundary.zig");
 

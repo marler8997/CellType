@@ -2,7 +2,6 @@ const std = @import("std");
 const design = @import("design.zig");
 
 pub const Error = union(enum) {
-    command_truncated,
     invalid_byte: usize,
     overflow: u32,
     unexpected_token: Token,
@@ -27,7 +26,6 @@ pub fn countOpsCt(comptime s: []const u8) usize {
     @setEvalBranchQuota(s.len * 1000);
     var err: Error = undefined;
     return countOps(s, &err) catch switch (err) {
-        .command_truncated => @compileError("the following command was truncated: '" ++ s ++ "'"),
         .invalid_byte => |offset| @compileError(std.fmt.comptimePrint(
             "invalid byte '{}' (0x{x}) at offset {} of string: {s}",
             .{ std.zig.fmtEscapes(s[offset..][0..1]), s[offset], offset, s },
@@ -180,7 +178,6 @@ fn parseBoundary(
             _ = &offset;
             const mod_token = try nextToken(s, out_err, offset);
             switch (mod_token.kind) {
-                .eof => return out_err.set(.command_truncated),
                 .neg, .pos => {
                     if (half_stroke_adjust != 0) return out_err.set(.{ .unexpected_token = mod_token });
                     const num_token = try nextToken(s, out_err, mod_token.end);
@@ -205,7 +202,7 @@ fn parseBoundary(
                     }
                     break :blk offset;
                 },
-                .num, .eq => return out_err.set(.{ .unexpected_token = mod_token }),
+                .eof, .num, .eq => return out_err.set(.{ .unexpected_token = mod_token }),
                 .semicolon => break :blk offset,
             }
         }
@@ -226,6 +223,31 @@ const Token = struct {
     kind: TokenKind,
     start: usize,
     end: usize,
+    pub fn fmt(self: Token, s: []const u8) TokenFmt {
+        return .{ .token = self, .s = s };
+    }
+};
+pub const TokenFmt = struct {
+    token: Token,
+    s: []const u8,
+    pub fn format(
+        self: TokenFmt,
+        comptime fmt: []const u8,
+        options: std.fmt.FormatOptions,
+        writer: anytype,
+    ) !void {
+        _ = fmt;
+        _ = options;
+        switch (self.token.kind) {
+            .eof => try writer.writeAll("EOF"),
+            .id => try writer.print("identifier '{s}'", .{self.s[self.token.start..self.token.end]}),
+            .neg => try writer.writeAll("character '-'"),
+            .pos => try writer.writeAll("character '-'"),
+            .num => try writer.print("number '{s}'", .{self.s[self.token.start..self.token.end]}),
+            .eq => try writer.writeAll("character '='"),
+            .semicolon => try writer.writeAll("character ';'"),
+        }
+    }
 };
 
 fn nextToken(s: []const u8, out_err: *Error, start: usize) error{Error}!Token {

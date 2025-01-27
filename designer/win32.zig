@@ -5,7 +5,7 @@ const win32 = @import("win32").everything;
 
 const app = @import("app.zig");
 
-const Rgb8 = @import("Rgb8.zig");
+const Rgba8 = @import("Rgba8.zig");
 const theme = @import("theme.zig");
 const XY = @import("xy.zig").XY;
 
@@ -65,6 +65,12 @@ pub fn main() !u8 {
             const arg = cmdline[index];
             index += 1;
             if (std.mem.eql(u8, arg, "--design")) {
+                app.exec(.design_mode);
+            } else if (std.mem.eql(u8, arg, "--designfile")) {
+                if (index >= cmdline.len) @panic("--designfile requires an argument");
+                const designfile = cmdline[index];
+                index += 1;
+                app.setDesignFile(designfile);
                 app.exec(.design_mode);
             } else if (std.mem.eql(u8, arg, "--text")) {
                 if (index >= cmdline.len) @panic("--text requires an argument");
@@ -162,6 +168,8 @@ pub fn main() !u8 {
         std.log.err("CreateWindow failed with {}", .{win32.GetLastError()});
         std.posix.exit(0xff);
     };
+
+    app.exec(.reload_design_file);
 
     {
         // TODO: maybe use DWMWA_USE_IMMERSIVE_DARK_MODE_BEFORE_20H1 if applicable
@@ -306,7 +314,7 @@ fn WndProc(
             }
             d2d.target.ID2D1RenderTarget.BeginDraw();
             {
-                const color = d2dFromRgb8(theme.bg.getRgb8());
+                const color = d2dFromRgba8(theme.bg.getRgba8());
                 d2d.target.ID2D1RenderTarget.Clear(&color);
             }
             app.render(
@@ -407,12 +415,12 @@ const D2d = struct {
         return &self.brush.ID2D1Brush;
     }
 };
-fn d2dFromRgb8(rgb: Rgb8) win32.D2D_COLOR_F {
+fn d2dFromRgba8(rgb: Rgba8) win32.D2D_COLOR_F {
     return .{
         .r = @as(f32, @floatFromInt(rgb.r)) / 255.0,
         .g = @as(f32, @floatFromInt(rgb.g)) / 255.0,
         .b = @as(f32, @floatFromInt(rgb.b)) / 255.0,
-        .a = 1.0,
+        .a = @as(f32, @floatFromInt(rgb.a)) / 255.0,
     };
 }
 
@@ -428,7 +436,7 @@ pub const RenderTarget = struct {
             .right = @floatFromInt(rect.right),
             .bottom = @floatFromInt(rect.bottom),
         };
-        const c = d2d.solid(d2dFromRgb8(color.getRgb8()));
+        const c = d2d.solid(d2dFromRgba8(color.getRgba8()));
         d2d.target.ID2D1RenderTarget.FillRectangle(&r, c);
     }
     // TODO: remove this method when our text rendering is ready to do the UI
@@ -482,7 +490,7 @@ pub const RenderTarget = struct {
                 1,
                 text_format,
                 &rect,
-                d2d.solid(d2dFromRgb8(theme.fg.getRgb8())),
+                d2d.solid(d2dFromRgba8(theme.fg.getRgba8())),
                 .{},
                 .NATURAL,
             );

@@ -24,6 +24,10 @@ pub const global = struct {
     pub var text: TextArray = TextArray.fromSlice("HiNZ0123") catch unreachable;
 };
 
+pub fn setDesignFile(file: []const u8) void {
+    global.design_mode.setDesignFile(file);
+}
+
 pub fn backspace() void {
     const len_before = global.text.len;
     while (global.text.len > 0) {
@@ -60,6 +64,7 @@ pub fn arrowKey(key: ArrowKey) void {
 pub const Command = union(enum) {
     view_mode,
     design_mode,
+    reload_design_file,
 };
 pub fn exec(command: Command) void {
     switch (command) {
@@ -75,6 +80,7 @@ pub fn exec(command: Command) void {
                 root.invalidate();
             }
         },
+        .reload_design_file => global.design_mode.reloadFile(),
     }
 }
 
