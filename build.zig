@@ -25,12 +25,13 @@ pub fn build(b: *std.Build) void {
         });
     };
 
+    const render_imports = [_]std.Build.Module.Import{
+        .{ .name = "core", .module = core_mod },
+        .{ .name = "glyphs", .module = glyphs_mod },
+    };
     const celltype_mod = b.addModule("celltype", .{
         .root_source_file = b.path("render/mod.zig"),
-        .imports = &.{
-            .{ .name = "core", .module = core_mod },
-            .{ .name = "glyphs", .module = glyphs_mod },
-        },
+        .imports = &render_imports,
     });
 
     {
@@ -60,5 +61,19 @@ pub fn build(b: *std.Build) void {
             run.addArgs(args);
         }
         b.step("designer", "").dependOn(&run.step);
+    }
+
+    const test_step = b.step("test", "");
+    test_step.dependOn(&b.addRunArtifact(b.addTest(.{
+        .root_source_file = b.path("core/lex.zig"),
+    })).step);
+    {
+        const t = b.addTest(.{
+            .root_source_file = b.path("render/PixelBoundary.zig"),
+        });
+        for (render_imports) |i| {
+            t.root_module.addImport(i.name, i.module);
+        }
+        test_step.dependOn(&b.addRunArtifact(t).step);
     }
 }

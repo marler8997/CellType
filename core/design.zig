@@ -20,20 +20,56 @@ pub const BoundaryBaseY = enum {
     base,
 };
 
-pub const BetweenX = struct {
+pub const AdjustableBoundaryX = struct {
     base: BoundaryBaseX,
-    ratio: f32,
+    adjust: i8 = 0,
+    pub fn format(
+        self: AdjustableBoundaryX,
+        comptime fmt: []const u8,
+        options: std.fmt.FormatOptions,
+        writer: anytype,
+    ) !void {
+        _ = fmt;
+        _ = options;
+        try writer.writeAll(@tagName(self.base));
+        if (self.adjust != 0) {
+            const prefix: u8 = if (self.adjust > 0) '+' else '-';
+            try writer.print("{c}{}", .{ prefix, self.adjust });
+        }
+    }
+};
+pub const AdjustableBoundaryY = struct {
+    base: BoundaryBaseY,
+    adjust: i8 = 0,
+    pub fn format(
+        self: AdjustableBoundaryY,
+        comptime fmt: []const u8,
+        options: std.fmt.FormatOptions,
+        writer: anytype,
+    ) !void {
+        _ = fmt;
+        _ = options;
+        try writer.writeAll(@tagName(self.base));
+        if (self.adjust != 0) {
+            const prefix: u8 = if (self.adjust > 0) '+' else '-';
+            try writer.print("{c}{}", .{ prefix, self.adjust });
+        }
+    }
 };
 
+pub const BetweenX = struct {
+    to: AdjustableBoundaryX,
+    ratio: f32,
+};
 pub const BetweenY = struct {
-    base: BoundaryBaseY,
+    to: AdjustableBoundaryY,
     ratio: f32,
 };
 
 pub const BoundaryX = struct {
-    base: BoundaryBaseX,
+    value: AdjustableBoundaryX,
     between: ?BetweenX = null,
-    half_stroke_adjust: i8 = 0,
+    //adjust: i8 = 0,
     pub fn format(
         self: BoundaryX,
         comptime fmt: []const u8,
@@ -42,19 +78,19 @@ pub const BoundaryX = struct {
     ) !void {
         _ = fmt;
         _ = options;
-        try writer.print("{s}", .{@tagName(self.base)});
-        if (self.between) |between| {
-            try writer.print(" (between {})", .{between});
+        if (self.between) |_| {
+            try writer.writeAll("between(");
         }
-        if (self.half_stroke_adjust != 0) {
-            try writer.print(" adjust {}", .{self.half_stroke_adjust});
+        try writer.print("{}", .{self.value});
+        if (self.between) |between| {
+            try writer.print(" {})", .{between});
         }
     }
 };
 pub const BoundaryY = struct {
-    base: BoundaryBaseY,
+    value: AdjustableBoundaryY,
     between: ?BetweenY = null,
-    half_stroke_adjust: i8 = 0,
+    //adjust: i8 = 0,
     pub fn format(
         self: BoundaryY,
         comptime fmt: []const u8,
@@ -63,12 +99,12 @@ pub const BoundaryY = struct {
     ) !void {
         _ = fmt;
         _ = options;
-        try writer.print("{s}", .{@tagName(self.base)});
-        if (self.between) |between| {
-            try writer.print(" (between {})", .{between});
+        if (self.between) |_| {
+            try writer.writeAll("between(");
         }
-        if (self.half_stroke_adjust != 0) {
-            try writer.print(" adjust {}", .{self.half_stroke_adjust});
+        try writer.print("{}", .{self.value});
+        if (self.between) |between| {
+            try writer.print(" {})", .{between});
         }
     }
 };
@@ -261,15 +297,15 @@ pub fn BoundaryBase(dimension: Dimension) type {
         .y => BoundaryBaseY,
     };
 }
+pub fn AdjustableBoundary(dimension: Dimension) type {
+    return switch (dimension) {
+        .x => AdjustableBoundaryX,
+        .y => AdjustableBoundaryY,
+    };
+}
 pub fn Boundary(dimension: Dimension) type {
     return switch (dimension) {
         .x => BoundaryX,
         .y => BoundaryY,
-    };
-}
-pub fn Between(dimension: Dimension) type {
-    return switch (dimension) {
-        .x => BetweenX,
-        .y => BetweenY,
     };
 }

@@ -291,21 +291,23 @@ fn updateOp(self: *DesignMode, direction: enum { left, right }) void {
 fn getDefault(op: celltype.design.Op2Tag) celltype.design.Op {
     return switch (op) {
         .todo => .{ .op = .todo },
-        .clip => .{ .op = .{ .clip = .{ .left = .{ .base = .center }, .top = .{ .base = .base } } } },
-        .stroke_vert => .{ .op = .{ .stroke_vert = .{ .x = .{ .base = .center } } } },
-        .stroke_horz => .{ .op = .{ .stroke_horz = .{ .y = .{ .base = .base } } } },
+        .clip => .{ .op = .{ .clip = .{ .left = .{ .value = .{
+            .base = .center,
+        } }, .top = .{ .value = .{ .base = .base } } } } },
+        .stroke_vert => .{ .op = .{ .stroke_vert = .{ .x = .{ .value = .{ .base = .center } } } } },
+        .stroke_horz => .{ .op = .{ .stroke_horz = .{ .y = .{ .value = .{ .base = .base } } } } },
         .stroke_diag => .{ .op = .{ .stroke_diag = .{
-            .a = .{ .x = .{ .base = .uppercase_left }, .y = .{ .base = .base } },
-            .b = .{ .x = .{ .base = .uppercase_right }, .y = .{ .base = .uppercase_top } },
+            .a = .{ .x = .{ .value = .{ .base = .uppercase_left } }, .y = .{ .value = .{ .base = .base } } },
+            .b = .{ .x = .{ .value = .{ .base = .uppercase_right } }, .y = .{ .value = .{ .base = .uppercase_top } } },
         } } },
         .stroke_dot => .{ .op = .{ .stroke_dot = .{
-            .x = .{ .base = .center, .half_stroke_adjust = 1 },
-            .y = .{ .base = .uppercase_top },
+            .x = .{ .value = .{ .base = .center, .adjust = 1 } },
+            .y = .{ .value = .{ .base = .uppercase_top } },
         } } },
         .stroke_curve => .{ .op = .{ .stroke_curve = .{
-            .start = .{ .x = .{ .base = .uppercase_left }, .y = .{ .base = .lowercase_top } },
-            .control = .{ .x = .{ .base = .center }, .y = .{ .base = .base } },
-            .end = .{ .x = .{ .base = .uppercase_right }, .y = .{ .base = .lowercase_top } },
+            .start = .{ .x = .{ .value = .{ .base = .uppercase_left } }, .y = .{ .value = .{ .base = .lowercase_top } } },
+            .control = .{ .x = .{ .value = .{ .base = .center } }, .y = .{ .value = .{ .base = .base } } },
+            .end = .{ .x = .{ .value = .{ .base = .uppercase_right } }, .y = .{ .value = .{ .base = .lowercase_top } } },
         } } },
     };
 }

@@ -41,12 +41,14 @@ pub fn fromRounded(rounded: i32, bias: Bias) PixelBoundary {
 }
 
 pub fn fromDesignX(w: i32, stroke_width: i32, x: design.BoundaryX) PixelBoundary {
-    const boundary = fromDesignBaseX(w, stroke_width, x.base).betweenX(w, stroke_width, x.between);
-    return boundary.adjust(stroke_width, x.half_stroke_adjust);
+    const boundary = fromDesignBaseX(w, stroke_width, x.value.base).adjust(stroke_width, x.value.adjust);
+    const bet = x.between orelse return boundary;
+    return boundary.betweenX(w, stroke_width, bet);
 }
 pub fn fromDesignY(h: i32, stroke_width: i32, y: design.BoundaryY) PixelBoundary {
-    const boundary = fromDesignBaseY(h, stroke_width, y.base).betweenY(h, stroke_width, y.between);
-    return boundary.adjust(stroke_width, y.half_stroke_adjust);
+    const boundary = fromDesignBaseY(h, stroke_width, y.value.base).adjust(stroke_width, y.value.adjust);
+    const bet = y.between orelse return boundary;
+    return boundary.betweenY(h, stroke_width, bet);
 }
 
 pub fn fromDesignBaseX(w: i32, stroke_width: i32, x: design.BoundaryBaseX) PixelBoundary {
@@ -113,10 +115,16 @@ pub fn centerReflect(self: PixelBoundary, size: i32) PixelBoundary {
 }
 
 pub fn betweenX(self: PixelBoundary, w: i32, stroke_width: i32, maybe: ?design.BetweenX) PixelBoundary {
-    return if (maybe) |b| self.between(fromDesignBaseX(w, stroke_width, b.base), b.ratio) else self;
+    return if (maybe) |b| self.between(fromDesignBaseX(w, stroke_width, b.to.base).adjust(
+        stroke_width,
+        b.to.adjust,
+    ), b.ratio) else self;
 }
 pub fn betweenY(self: PixelBoundary, h: i32, stroke_width: i32, maybe: ?design.BetweenY) PixelBoundary {
-    return if (maybe) |b| self.between(fromDesignBaseY(h, stroke_width, b.base), b.ratio) else self;
+    return if (maybe) |b| self.between(fromDesignBaseY(h, stroke_width, b.to.base).adjust(
+        stroke_width,
+        b.to.adjust,
+    ), b.ratio) else self;
 }
 pub fn between(self: PixelBoundary, other: PixelBoundary, ratio: f32) PixelBoundary {
     const diff = other.slot - self.slot;

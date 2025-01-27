@@ -32,6 +32,7 @@ pub fn countOpsCt(comptime s: []const u8) usize {
         )),
         .unexpected_token => |token| @compileError("unexpected token '" ++ s[token.start..token.end] ++ "' at offset " ++ std.fmt.comptimePrint("{}", .{token.start}) ++ " of string: " ++ s),
         .duplicate_property => |token| @compileError("duplicated property '" ++ s[token.start..token.end] ++ "'"),
+        .overflow => |value| @compileError(std.fmt.comptimePrint("number overflow '{}'", .{value})),
     };
 }
 
@@ -170,69 +171,52 @@ fn parseBoundary(
     const base_token_str = s[base_token.start..base_token.end];
 
     const BoundaryBase = design.BoundaryBase(dimension);
-    const parts: struct {
-        base: BoundaryBase,
-        between: ?design.Between(dimension),
-    } = blk: {
-        if (std.mem.eql(u8, base_token_str, "between")) {
-            var offset = try expectToken(s, out_err, base_token.end, .open_paren);
-            _ = &offset;
-            @panic("todo: parse between");
-        }
-        inline for (std.meta.fields(BoundaryBase)) |field| {
-            if (std.mem.eql(u8, base_token_str, field.name)) {
-                break :blk .{ .base = @enumFromInt(field.value), .between = null };
-            }
-        }
-        return out_err.set(.{ .unexpected_token = base_token });
-    };
-
-    var half_stroke_adjust: i8 = 0;
-
-    const end = blk: {
-        var offset = base_token.end;
-        while (true) {
-            _ = &offset;
-            const mod_token = try nextToken(s, out_err, offset);
-            switch (mod_token.kind) {
-                .neg, .pos => {
-                    if (half_stroke_adjust != 0) return out_err.set(.{ .unexpected_token = mod_token });
-                    const num_token = try nextToken(s, out_err, mod_token.end);
-                    switch (num_token.kind) {
-                        .eof, .id, .neg, .pos, .eq, .open_paren, .close_paren, .semicolon => return out_err.set(.{ .unexpected_token = num_token }),
-                        .num => {},
-                    }
-                    const num_str = s[num_token.start..num_token.end];
-                    const num: u32 = std.fmt.parseInt(u32, num_str, 10) catch return out_err.set(.{ .unexpected_token = num_token });
-                    if (mod_token.kind == .pos) {
-                        half_stroke_adjust = std.math.cast(i8, num) orelse return out_err.set(.{ .overflow = num });
-                    } else {
-                        const num_i32 = std.math.cast(i32, num) orelse return out_err.set(.{ .overflow = num });
-                        half_stroke_adjust = std.math.cast(i8, -num_i32) orelse return out_err.set(.{ .overflow = num });
-                    }
-                    offset = num_token.end;
+    if (std.mem.eql(u8, base_token_str, "between")) {
+        var offset = try expectToken(s, out_err, base_token.end, .open_paren);
+        _ = &offset;
+        @panic("todo: parse between");
+    }
+    inline for (std.meta.fields(BoundaryBase)) |field| {
+        if (std.mem.eql(u8, base_token_str, field.name)) {
+            const adjust, const offset = try parseAdjust(s, out_err, base_token.end);
+            return .{
+                .{
+                    .value = .{ .base = @enumFromInt(field.value), .adjust = adjust },
+                    .between = null,
                 },
-                .id => {
-                    const mod_str = s[mod_token.start..mod_token.end];
-                    if (std.mem.eql(u8, mod_str, "between")) {
-                        @panic("todo");
-                    }
-                    break :blk offset;
-                },
-                .eof, .num, .open_paren, .close_paren, .eq => return out_err.set(.{ .unexpected_token = mod_token }),
-                .semicolon => break :blk offset,
-            }
+                offset,
+            };
         }
-    };
+    }
+    return out_err.set(.{ .unexpected_token = base_token });
+}
 
-    return .{
-        .{
-            .base = parts.base,
-            .between = parts.between,
-            .half_stroke_adjust = half_stroke_adjust,
+fn parseAdjust(
+    s: []const u8,
+    out_err: *Error,
+    start: usize,
+) error{Error}!struct { i8, usize } {
+    const mod_token = try nextToken(s, out_err, start);
+    switch (mod_token.kind) {
+        .neg, .pos => {
+            const num_token = try nextToken(s, out_err, mod_token.end);
+            switch (num_token.kind) {
+                .eof, .id, .neg, .pos, .eq, .open_paren, .close_paren, .semicolon => return out_err.set(.{ .unexpected_token = num_token }),
+                .num => {},
+            }
+            const num_str = s[num_token.start..num_token.end];
+            const num: u32 = std.fmt.parseInt(u32, num_str, 10) catch return out_err.set(.{ .unexpected_token = num_token });
+            const adjust: i8 = blk: {
+                if (mod_token.kind == .pos) {
+                    break :blk std.math.cast(i8, num) orelse return out_err.set(.{ .overflow = num });
+                }
+                const num_i32 = std.math.cast(i32, num) orelse return out_err.set(.{ .overflow = num });
+                break :blk std.math.cast(i8, -num_i32) orelse return out_err.set(.{ .overflow = num });
+            };
+            return .{ adjust, num_token.end };
         },
-        end,
-    };
+        else => return .{ 0, start },
+    }
 }
 
 const TokenKind = enum { eof, id, neg, pos, num, eq, open_paren, close_paren, semicolon };
@@ -334,28 +318,28 @@ test {
     var err: Error = undefined;
     try std.testing.expectEqual(
         design.Op{ .op = .{ .clip = .{
-            .left = .{ .base = .center, .half_stroke_adjust = 1 },
-            .right = .{ .base = .uppercase_right, .half_stroke_adjust = -3 },
-            .top = .{ .base = .base },
+            .left = .{ .value = .{ .base = .center, .adjust = 1 } },
+            .right = .{ .value = .{ .base = .uppercase_right, .adjust = -3 } },
+            .top = .{ .value = .{ .base = .base } },
         } } },
         (try parseOp("clip left=center+1 right=uppercase_right-3 top=base;", &err, 0)).?[0],
     );
     try std.testing.expectEqual(
         design.Op{ .op = .{ .stroke_vert = .{
-            .x = .{ .base = .uppercase_left, .half_stroke_adjust = -100 },
+            .x = .{ .value = .{ .base = .uppercase_left, .adjust = -100 } },
         } } },
         (try parseOp("stroke vert uppercase_left-100;", &err, 0)).?[0],
     );
     try std.testing.expectEqual(
         design.Op{ .op = .{ .stroke_horz = .{
-            .y = .{ .base = .base, .half_stroke_adjust = 0 },
+            .y = .{ .value = .{ .base = .base, .adjust = 0 } },
         } } },
         (try parseOp("stroke horz base;", &err, 0)).?[0],
     );
     try std.testing.expectEqual(
         design.Op{ .op = .{ .stroke_diag = .{
-            .a = .{ .x = .{ .base = .uppercase_left, .half_stroke_adjust = -1 }, .y = .{ .base = .base } },
-            .b = .{ .x = .{ .base = .uppercase_right, .half_stroke_adjust = 1 }, .y = .{ .base = .uppercase_top } },
+            .a = .{ .x = .{ .value = .{ .base = .uppercase_left, .adjust = -1 } }, .y = .{ .value = .{ .base = .base } } },
+            .b = .{ .x = .{ .value = .{ .base = .uppercase_right, .adjust = 1 } }, .y = .{ .value = .{ .base = .uppercase_top } } },
         } } },
         (try parseOp("stroke diag uppercase_left-1 base uppercase_right+1 uppercase_top;", &err, 0)).?[0],
     );
