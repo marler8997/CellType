@@ -95,13 +95,31 @@ pub fn reloadFile(self: *DesignMode) void {
     while (offset < content.len) {
         var err: celltype.lex.Error = undefined;
         const op, offset = (celltype.lex.parseOp(content, &err, offset) catch switch (err) {
+            .invalid_char => |char_offset| return self.setFileParseError(
+                file,
+                content,
+                "invalid character '{}' (0x{x}) at offset {}",
+                .{ std.zig.fmtEscapes(content[char_offset..][0..1]), content[char_offset], char_offset },
+            ),
             .unexpected_token => |token| return self.setFileParseError(
                 file,
                 content,
-                "unexpected token '{s}' at offset {}",
+                "unexpected token {} at offset {}",
                 .{ token.fmt(content), token.start },
             ),
-            else => return self.setFileParseError(file, content, "???", .{}),
+            .overflow => |value| return self.setFileParseError(
+                file,
+                content,
+                "number overflow {}",
+                .{value},
+            ),
+            .duplicate_property => |token| return self.setFileParseError(
+                file,
+                content,
+
+                "duplicate property '{s}' at offset {}",
+                .{ content[token.start..token.end], token.start },
+            ),
         }) orelse break;
         self.ops.append(self.arena.allocator(), op) catch |e| oom(e);
     }

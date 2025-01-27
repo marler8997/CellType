@@ -2,7 +2,7 @@ const std = @import("std");
 const design = @import("design.zig");
 
 pub const Error = union(enum) {
-    invalid_byte: usize,
+    invalid_char: usize,
     overflow: u32,
     unexpected_token: Token,
     duplicate_property: Token,
@@ -26,7 +26,7 @@ pub fn countOpsCt(comptime s: []const u8) usize {
     @setEvalBranchQuota(s.len * 1000);
     var err: Error = undefined;
     return countOps(s, &err) catch switch (err) {
-        .invalid_byte => |offset| @compileError(std.fmt.comptimePrint(
+        .invalid_char => |offset| @compileError(std.fmt.comptimePrint(
             "invalid byte '{}' (0x{x}) at offset {} of string: {s}",
             .{ std.zig.fmtEscapes(s[offset..][0..1]), s[offset], offset, s },
         )),
@@ -55,7 +55,7 @@ pub fn parseOp(s: []const u8, out_err: *Error, start: usize) error{Error}!?struc
     switch (op_kind_token.kind) {
         .eof => return null,
         .id => {},
-        .neg, .pos, .num, .eq, .semicolon => return out_err.set(.{
+        .neg, .pos, .num, .eq, .open_paren, .close_paren, .semicolon => return out_err.set(.{
             .unexpected_token = op_kind_token,
         }),
     }
@@ -170,16 +170,23 @@ fn parseBoundary(
     const base_token_str = s[base_token.start..base_token.end];
 
     const BoundaryBase = design.BoundaryBase(dimension);
-    const base: BoundaryBase = blk: {
+    const parts: struct {
+        base: BoundaryBase,
+        between: ?design.Between(dimension),
+    } = blk: {
+        if (std.mem.eql(u8, base_token_str, "between")) {
+            var offset = try expectToken(s, out_err, base_token.end, .open_paren);
+            _ = &offset;
+            @panic("todo: parse between");
+        }
         inline for (std.meta.fields(BoundaryBase)) |field| {
             if (std.mem.eql(u8, base_token_str, field.name)) {
-                break :blk @enumFromInt(field.value);
+                break :blk .{ .base = @enumFromInt(field.value), .between = null };
             }
         }
         return out_err.set(.{ .unexpected_token = base_token });
     };
 
-    const between: ?design.Between(dimension) = null;
     var half_stroke_adjust: i8 = 0;
 
     const end = blk: {
@@ -192,7 +199,7 @@ fn parseBoundary(
                     if (half_stroke_adjust != 0) return out_err.set(.{ .unexpected_token = mod_token });
                     const num_token = try nextToken(s, out_err, mod_token.end);
                     switch (num_token.kind) {
-                        .eof, .id, .neg, .pos, .eq, .semicolon => return out_err.set(.{ .unexpected_token = num_token }),
+                        .eof, .id, .neg, .pos, .eq, .open_paren, .close_paren, .semicolon => return out_err.set(.{ .unexpected_token = num_token }),
                         .num => {},
                     }
                     const num_str = s[num_token.start..num_token.end];
@@ -212,7 +219,7 @@ fn parseBoundary(
                     }
                     break :blk offset;
                 },
-                .eof, .num, .eq => return out_err.set(.{ .unexpected_token = mod_token }),
+                .eof, .num, .open_paren, .close_paren, .eq => return out_err.set(.{ .unexpected_token = mod_token }),
                 .semicolon => break :blk offset,
             }
         }
@@ -220,15 +227,15 @@ fn parseBoundary(
 
     return .{
         .{
-            .base = base,
-            .between = between,
+            .base = parts.base,
+            .between = parts.between,
             .half_stroke_adjust = half_stroke_adjust,
         },
         end,
     };
 }
 
-const TokenKind = enum { eof, id, neg, pos, num, eq, semicolon };
+const TokenKind = enum { eof, id, neg, pos, num, eq, open_paren, close_paren, semicolon };
 const Token = struct {
     kind: TokenKind,
     start: usize,
@@ -255,6 +262,8 @@ pub const TokenFmt = struct {
             .pos => try writer.writeAll("character '-'"),
             .num => try writer.print("number '{s}'", .{self.s[self.token.start..self.token.end]}),
             .eq => try writer.writeAll("character '='"),
+            .open_paren => try writer.writeAll("character '('"),
+            .close_paren => try writer.writeAll("character ')'"),
             .semicolon => try writer.writeAll("character ';'"),
         }
     }
@@ -265,25 +274,28 @@ fn nextToken(s: []const u8, out_err: *Error, start: usize) error{Error}!Token {
     while (true) : (offset += 1) {
         if (offset >= s.len) return .{ .kind = .eof, .start = s.len, .end = s.len };
         return switch (s[offset]) {
-            0...9 => out_err.set(.{ .invalid_byte = offset }),
+            0...9 => out_err.set(.{ .invalid_char = offset }),
             '\n' => continue,
-            11, 12 => out_err.set(.{ .invalid_byte = offset }),
+            11, 12 => out_err.set(.{ .invalid_char = offset }),
             '\r' => continue,
-            14...31 => out_err.set(.{ .invalid_byte = offset }),
+            14...31 => out_err.set(.{ .invalid_char = offset }),
             ' ' => continue,
-            '!'...'*' => out_err.set(.{ .invalid_byte = offset }),
+            '!'...'\'' => out_err.set(.{ .invalid_char = offset }),
+            '(' => .{ .kind = .open_paren, .start = offset, .end = offset + 1 },
+            ')' => .{ .kind = .close_paren, .start = offset, .end = offset + 1 },
+            '*' => out_err.set(.{ .invalid_char = offset }),
             '+' => .{ .kind = .pos, .start = offset, .end = offset + 1 },
-            ',' => out_err.set(.{ .invalid_byte = offset }),
+            ',' => out_err.set(.{ .invalid_char = offset }),
             '-' => .{ .kind = .neg, .start = offset, .end = offset + 1 },
-            '.', '/' => out_err.set(.{ .invalid_byte = offset }),
+            '.', '/' => out_err.set(.{ .invalid_char = offset }),
             '0'...'9' => .{ .kind = .num, .start = offset, .end = scan(s, offset + 1, isNumChar) },
-            ':' => out_err.set(.{ .invalid_byte = offset }),
+            ':' => out_err.set(.{ .invalid_char = offset }),
             ';' => .{ .kind = .semicolon, .start = offset, .end = offset + 1 },
-            '<' => out_err.set(.{ .invalid_byte = offset }),
+            '<' => out_err.set(.{ .invalid_char = offset }),
             '=' => .{ .kind = .eq, .start = offset, .end = offset + 1 },
-            '>'...'@' => out_err.set(.{ .invalid_byte = offset }),
+            '>'...'@' => out_err.set(.{ .invalid_char = offset }),
             'A'...'Z' => .{ .kind = .id, .start = offset, .end = scan(s, offset + 1, isIdChar) },
-            '['...'`' => out_err.set(.{ .invalid_byte = offset }),
+            '['...'`' => out_err.set(.{ .invalid_char = offset }),
             'a'...'z' => .{ .kind = .id, .start = offset, .end = scan(s, offset + 1, isIdChar) },
             '{'...255 => @panic("todo"),
         };
@@ -305,6 +317,7 @@ fn isIdChar(c: u8) bool {
 
 fn isNumChar(c: u8) bool {
     return switch (c) {
+        '.' => true,
         '0'...'9' => true,
         else => false,
     };
@@ -345,5 +358,13 @@ test {
             .b = .{ .x = .{ .base = .uppercase_right, .half_stroke_adjust = 1 }, .y = .{ .base = .uppercase_top } },
         } } },
         (try parseOp("stroke diag uppercase_left-1 base uppercase_right+1 uppercase_top;", &err, 0)).?[0],
+    );
+
+    // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    if (false) try std.testing.expectEqual(
+        design.Op{ .op = .{ .stroke_vert = .{
+            .x = .{ .base = .center, .between = .{ .base = .uppercase_right, .ratio = 0.5 }, .half_stroke_adjust = -2 },
+        } } },
+        (try parseOp("stroke vert between(center 0.5 uppercase_right)-2;", &err, 0)).?[0],
     );
 }
