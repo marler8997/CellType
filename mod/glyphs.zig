@@ -177,34 +177,20 @@ pub const i = lex.parseOps(
     \\stroke vert center;
 );
 
-pub const N = [_]Op{
-    .{ .op = .{ .clip = .{
-        .left = .{ .base = .uppercase_left, .half_stroke_adjust = -1 },
-        .right = .{ .base = .uppercase_right, .half_stroke_adjust = 1 },
-        .top = .{ .base = .uppercase_top, .half_stroke_adjust = -1 },
-        .bottom = .{ .base = .base, .half_stroke_adjust = 1 },
-    } } },
-    .{ .op = .{ .stroke_vert = .{ .x = .{ .base = .uppercase_left } } } },
-    .{ .op = .{ .stroke_vert = .{ .x = .{ .base = .uppercase_right } } } },
-    .{ .op = .{ .stroke_diag = .{
-        .a = .{ .x = .{ .base = .uppercase_left }, .y = .{ .base = .uppercase_top, .half_stroke_adjust = -1 } },
-        .b = .{ .x = .{ .base = .uppercase_right }, .y = .{ .base = .base, .half_stroke_adjust = 1 } },
-    } } },
-};
-pub const Z = [_]Op{
-    .{ .op = .{ .clip = .{
-        .left = .{ .base = .uppercase_left, .half_stroke_adjust = -1 },
-        .right = .{ .base = .uppercase_right, .half_stroke_adjust = 1 },
-        .top = .{ .base = .uppercase_top, .half_stroke_adjust = -1 },
-        .bottom = .{ .base = .base, .half_stroke_adjust = 1 },
-    } } },
-    .{ .op = .{ .stroke_horz = .{ .y = .{ .base = .uppercase_top } } } },
-    .{ .op = .{ .stroke_horz = .{ .y = .{ .base = .base } } } },
-    .{ .op = .{ .stroke_diag = .{
-        .a = .{ .x = .{ .base = .uppercase_left }, .y = .{ .base = .base, .half_stroke_adjust = -1 } },
-        .b = .{ .x = .{ .base = .uppercase_right }, .y = .{ .base = .uppercase_top, .half_stroke_adjust = 1 } },
-    } } },
-};
+pub const N = lex.parseOps(
+    \\clip left=uppercase_left-1 right=uppercase_right+1 top=uppercase_top-1 bottom=base+1;
+    \\stroke vert uppercase_left;
+    \\stroke vert uppercase_right;
+    \\stroke diag uppercase_left uppercase_top-1 uppercase_right base+1;
+);
+
+pub const Z = lex.parseOps(
+    \\clip left=uppercase_left-1 right=uppercase_right+1 top=uppercase_top-1 bottom=base+1;
+    \\stroke horz uppercase_top;
+    \\stroke horz base;
+    \\stroke diag uppercase_left base-1 uppercase_right uppercase_top+1;
+);
+
 pub const O = [_]Op{
     .{ .op = .{
         .stroke_curve = .{
