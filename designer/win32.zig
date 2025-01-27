@@ -57,6 +57,12 @@ pub fn main() !u8 {
     var window_left: i32 = win32.CW_USEDEFAULT;
     var window_size: XY(i32) = .{ .x = win32.CW_USEDEFAULT, .y = win32.CW_USEDEFAULT };
 
+    var designfile_watch: DirectoryWatch = undefined;
+    var designfile_name: []const u8 = undefined;
+    var opt: struct {
+        designfile: ?[]const u8 = null,
+    } = .{};
+
     {
         const cmdline = try std.process.argsAlloc(arena);
         // no need to free
@@ -70,6 +76,27 @@ pub fn main() !u8 {
                 if (index >= cmdline.len) @panic("--designfile requires an argument");
                 const designfile = cmdline[index];
                 index += 1;
+                if (opt.designfile != null) @panic("multiple --designfile options given");
+                opt.designfile = designfile;
+                designfile_name = std.fs.path.basename(designfile);
+
+                var path_w: std.os.windows.PathSpace = undefined;
+                if (std.fs.path.dirname(designfile)) |dirname| {
+                    // silly that we converted to wtf8 and now back to wtf16
+                    path_w = std.os.windows.sliceToPrefixedFileW(
+                        std.fs.cwd().fd,
+                        dirname,
+                    ) catch |e| std.debug.panic("invalid --designfile path: {s}", .{@errorName(e)});
+                } else {
+                    path_w.data[0] = '.';
+                    path_w.data[1] = 0;
+                    path_w.len = 1;
+                }
+
+                DirectoryWatch.init(&designfile_watch, path_w.span()) catch |e| std.debug.panic(
+                    "failed to open --designfile '{s}' with {s}",
+                    .{ std.unicode.fmtUtf16Le(path_w.span()), @errorName(e) },
+                );
                 app.setDesignFile(designfile);
                 app.exec(.design_mode);
             } else if (std.mem.eql(u8, arg, "--text")) {
@@ -169,8 +196,6 @@ pub fn main() !u8 {
         std.posix.exit(0xff);
     };
 
-    app.exec(.reload_design_file);
-
     {
         // TODO: maybe use DWMWA_USE_IMMERSIVE_DARK_MODE_BEFORE_20H1 if applicable
         // see https://stackoverflow.com/questions/57124243/winforms-dark-title-bar-on-windows-10
@@ -190,14 +215,50 @@ pub fn main() !u8 {
 
     _ = win32.ShowWindow(global.hwnd, win32.SW_SHOW);
 
-    const wparam = blk: {
-        while (true) {
-            var msg: win32.MSG = undefined;
-            const result = win32.GetMessageW(&msg, null, 0, 0);
-            if (result < 0) win32.panicWin32("GetMessage", win32.GetLastError());
-            if (result == 0) break :blk msg.wParam;
-            _ = win32.TranslateMessage(&msg);
-            _ = win32.DispatchMessageW(&msg);
+    if (opt.designfile) |_| {
+        designfile_watch.startRead();
+        app.exec(.reload_design_file);
+    }
+
+    const wparam = quit: {
+        if (opt.designfile == null) {
+            while (true) {
+                var msg: win32.MSG = undefined;
+                const result = win32.GetMessageW(&msg, null, 0, 0);
+                if (result < 0) win32.panicWin32("GetMessage", win32.GetLastError());
+                if (result == 0) break :quit msg.wParam;
+                _ = win32.TranslateMessage(&msg);
+                _ = win32.DispatchMessageW(&msg);
+            }
+        } else while (true) {
+            const wait_result = win32.MsgWaitForMultipleObjectsEx(
+                1,
+                @ptrCast(&designfile_watch.overlapped.hEvent),
+                win32.INFINITE,
+                win32.QS_ALLINPUT,
+                .{ .ALERTABLE = 1, .INPUTAVAILABLE = 1 },
+            );
+
+            if (wait_result == 0) {
+                if (designfile_watch.finishRead(designfile_name)) {
+                    app.exec(.reload_design_file);
+                }
+                designfile_watch.startRead();
+            } else {
+                std.debug.assert(wait_result == 1);
+            }
+
+            {
+                var msg: win32.MSG = undefined;
+                while (true) {
+                    const result = win32.PeekMessageW(&msg, null, 0, 0, win32.PM_REMOVE);
+                    if (result < 0) win32.panicWin32("PeekMessage", win32.GetLastError());
+                    if (result == 0) break;
+                    if (msg.message == win32.WM_QUIT) break :quit msg.wParam;
+                    _ = win32.TranslateMessage(&msg);
+                    _ = win32.DispatchMessageW(&msg);
+                }
+            }
         }
     };
 
@@ -620,6 +681,108 @@ pub const RenderTarget = struct {
             .LINEAR, // interpolation mode
             &src_rect,
         );
+    }
+};
+
+const DirectoryWatch = struct {
+    handle: win32.HANDLE,
+    overlapped: win32.OVERLAPPED,
+    read_buf: [1024]u8,
+
+    pub fn deinit(self: *DirectoryWatch) void {
+        win32.CloseHandle(self.overlapped.hEvent);
+        win32.CloseHandle(self.handle);
+    }
+
+    pub fn init(self: *DirectoryWatch, directory_path: [:0]const u16) !void {
+        std.log.info("initializing file watch for directory '{}'", .{std.unicode.fmtUtf16Le(directory_path)});
+        const handle = win32.CreateFileW(
+            directory_path,
+            .{ .FILE_READ_DATA = 1 },
+            .{ .READ = 1, .WRITE = 1, .DELETE = 1 },
+            null,
+            .OPEN_EXISTING,
+            .{ .FILE_FLAG_BACKUP_SEMANTICS = 1, .FILE_FLAG_OVERLAPPED = 1 },
+            null,
+        );
+        if (handle == win32.INVALID_HANDLE_VALUE) switch (win32.GetLastError()) {
+            win32.ERROR_FILE_NOT_FOUND => return error.FileNotFound,
+            else => std.debug.panic(
+                "todo: handle CreateFile on '{}' failed with error {}",
+                .{ std.unicode.fmtUtf16Le(directory_path), win32.GetLastError() },
+            ),
+        };
+        errdefer win32.closeHandle(handle);
+
+        const event = win32.CreateEventW(null, 1, 0, null) orelse win32.panicWin32(
+            "CreateEvent",
+            win32.GetLastError(),
+        );
+        errdefer win32.closeHandle(event);
+
+        self.* = .{
+            .handle = handle,
+            .overlapped = .{
+                .Internal = 0,
+                .InternalHigh = 0,
+                .Anonymous = .{ .Anonymous = .{
+                    .Offset = 0,
+                    .OffsetHigh = 0,
+                } },
+                .hEvent = event,
+            },
+            .read_buf = undefined,
+        };
+    }
+
+    pub fn startRead(self: *DirectoryWatch) void {
+        const result = win32.ReadDirectoryChangesW(
+            self.handle,
+            &self.read_buf,
+            self.read_buf.len,
+            0, // not recursive
+            .{ .LAST_WRITE = 1 },
+            null,
+            &self.overlapped,
+            null,
+        );
+        if (result == 0) win32.panicWin32("ReadDirectoryChanges", win32.GetLastError());
+    }
+
+    pub fn finishRead(self: *DirectoryWatch, name_filter: []const u8) bool {
+        var bytes_transferred: u32 = undefined;
+        if (win32.GetOverlappedResult(
+            self.handle,
+            &self.overlapped,
+            &bytes_transferred,
+            0, // don't wait
+        ) == 0) win32.panicWin32("GetOverlappedResult", win32.GetLastError());
+
+        var name_modified: bool = false;
+
+        if (bytes_transferred > 0) {
+            var offset: usize = 0;
+            while (offset < bytes_transferred) {
+                const info: *win32.FILE_NOTIFY_INFORMATION = @alignCast(@ptrCast(&self.read_buf[offset]));
+                const filename_ptr: [*]u16 = &info.FileName;
+                const filename_len = info.FileNameLength / 2; // Convert bytes to UTF-16 characters
+                const filename = filename_ptr[0..filename_len];
+
+                if (false) std.log.debug("file change '{s}'", .{std.unicode.fmtUtf16Le(filename)});
+                name_modified = name_modified or blk: {
+                    // a bad/incorrect but probably good enough comparison
+                    if (filename.len != name_filter.len) break :blk false;
+                    for (filename, name_filter) |a, b| {
+                        if (a != b) break :blk false;
+                    }
+                    break :blk true;
+                };
+
+                if (info.NextEntryOffset == 0) break;
+                offset += info.NextEntryOffset;
+            }
+        }
+        return name_modified;
     }
 };
 
