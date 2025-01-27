@@ -53,10 +53,14 @@ pub fn fromDesignBaseX(w: i32, stroke_width: i32, x: design.BoundaryBaseX) Pixel
     // multiplier for the position
     const large_enough_ratio: f32 = switch (x) {
         .uppercase_left => 0.210,
-        .center => 0.5,
+        .center => 0.4999,
         .uppercase_right => return fromDesignBaseX(w, stroke_width, .uppercase_left).centerReflect(w),
     };
     return PixelBoundary.initFloat(large_enough_ratio * @as(f32, @floatFromInt(w)));
+}
+
+test fromDesignBaseX {
+    try std.testing.expectEqual(fromRounded(5, .neg), fromDesignBaseX(10, 2, .center));
 }
 
 pub fn fromDesignBaseY(h: i32, stroke_width: i32, y: design.BoundaryBaseY) PixelBoundary {
