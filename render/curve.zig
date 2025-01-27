@@ -1,7 +1,7 @@
 const std = @import("std");
 
-const celltype = @import("celltype.zig");
-const Coord = celltype.Coord;
+const mod_root = @import("mod.zig");
+const Coord = mod_root.Coord;
 
 pub fn findClosestPointOnQuadraticBezier(
     point: Coord(f32),
@@ -40,7 +40,7 @@ pub fn findClosestPointOnQuadraticBezier(
     for (roots) |t| {
         if (t >= 0 and t <= 1) {
             const pt = evaluateQuadraticBezier(t, p0, p1, p2);
-            const dist = celltype.calcDist(point.x, point.y, pt.x, pt.y);
+            const dist = mod_root.calcDist(point.x, point.y, pt.x, pt.y);
             if (dist < min_dist) {
                 min_dist = dist;
                 best_t = t;
@@ -49,13 +49,13 @@ pub fn findClosestPointOnQuadraticBezier(
     }
 
     // Also check endpoints
-    const dist0 = celltype.calcDist(point.x, point.y, p0.x, p0.y);
+    const dist0 = mod_root.calcDist(point.x, point.y, p0.x, p0.y);
     if (dist0 < min_dist) {
         min_dist = dist0;
         best_t = 0;
     }
 
-    const dist1 = celltype.calcDist(point.x, point.y, p2.x, p2.y);
+    const dist1 = mod_root.calcDist(point.x, point.y, p2.x, p2.y);
     if (dist1 < min_dist) {
         min_dist = dist1;
         best_t = 1;

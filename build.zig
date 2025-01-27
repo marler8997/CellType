@@ -4,8 +4,33 @@ pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
+    const core_mod = b.addModule("core", .{
+        .root_source_file = b.path("core/mod.zig"),
+    });
+
+    const glyphs_mod = blk: {
+        const exe = b.addExecutable(.{
+            .name = "genglyphs",
+            .root_source_file = b.path("codegen/genglyphs.zig"),
+            .target = b.host,
+        });
+        const run = b.addRunArtifact(exe);
+        run.addFileArg(b.path("codegen/glyphs"));
+        const glyphs_src = run.addOutputFileArg("glyphs.zig");
+        break :blk b.createModule(.{
+            .root_source_file = glyphs_src,
+            .imports = &.{
+                .{ .name = "core", .module = core_mod },
+            },
+        });
+    };
+
     const celltype_mod = b.addModule("celltype", .{
-        .root_source_file = b.path("mod/celltype.zig"),
+        .root_source_file = b.path("render/mod.zig"),
+        .imports = &.{
+            .{ .name = "core", .module = core_mod },
+            .{ .name = "glyphs", .module = glyphs_mod },
+        },
     });
 
     {

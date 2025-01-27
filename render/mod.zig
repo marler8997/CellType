@@ -2,10 +2,13 @@
 //             helps simplify things
 const std = @import("std");
 
+const core = @import("core");
+pub const design = core.design;
+pub const lex = core.lex;
+
+pub const glyphs = @import("glyphs");
+
 const curve = @import("curve.zig");
-pub const design = @import("design.zig");
-pub const glyphs = @import("glyphs.zig");
-pub const lex = @import("lex.zig");
 
 const PixelBoundary = @import("PixelBoundary.zig");
 
@@ -118,7 +121,10 @@ fn getOps(grapheme_utf8: []const u8) error{Utf8Decode}!struct { usize, []const d
         => return error.Utf8Decode,
     };
     if (std.math.cast(u8, codepoint)) |codepoint_u8| switch (codepoint_u8) {
-        inline else => |c| if (@hasDecl(glyphs, &[_]u8{c})) return .{ utf8_len, &@field(glyphs, &[_]u8{c}) },
+        inline else => |c| {
+            if (@hasDecl(glyphs, &[_]u8{c})) return .{ utf8_len, &@field(glyphs, &[_]u8{c}) };
+            if (@hasDecl(core.glyphsold, &[_]u8{c})) return .{ utf8_len, &@field(core.glyphsold, &[_]u8{c}) };
+        },
     };
     return .{ utf8_len, &todo };
 }

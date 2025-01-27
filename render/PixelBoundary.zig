@@ -1,7 +1,8 @@
 const PixelBoundary = @This();
 
 const std = @import("std");
-const design = @import("design.zig");
+const core = @import("core");
+const design = core.design;
 
 pub const Bias = enum {
     neg,

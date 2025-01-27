@@ -1,7 +1,4 @@
-const design = @import("design.zig");
-const lex = @import("lex.zig");
-
-const Op = design.Op;
+const Op = @import("design.zig").Op;
 
 pub const @"0" = O ++ [_]Op{
     .{ .op = .{ .clip = .{
@@ -149,47 +146,6 @@ pub const @"3" = [_]Op{
         },
     } },
 };
-
-pub const H = lex.parseOps(
-    \\clip
-    \\    left=uppercase_left-1 right=uppercase_right+1
-    \\    top=uppercase_top-1 bottom=base+1
-    \\;
-    \\stroke vert uppercase_left;
-    \\stroke vert uppercase_right;
-    \\stroke horz uppercase_center;
-);
-pub const L = lex.parseOps(
-    \\clip left=uppercase_left-1 right=uppercase_right+1 top=uppercase_top-1 bottom=base+1;
-    \\stroke vert uppercase_left;
-    \\stroke horz base;
-);
-pub const T = lex.parseOps(
-    \\clip left=uppercase_left-1 right=uppercase_right+1 top=uppercase_top-1 bottom=base+1;
-    \\stroke vert center;
-    \\stroke horz uppercase_top;
-);
-
-pub const i = lex.parseOps(
-    \\clip bottom=base+1;
-    \\stroke dot center lowercase_dot;
-    \\clip top=lowercase_top-1;
-    \\stroke vert center;
-);
-
-pub const N = lex.parseOps(
-    \\clip left=uppercase_left-1 right=uppercase_right+1 top=uppercase_top-1 bottom=base+1;
-    \\stroke vert uppercase_left;
-    \\stroke vert uppercase_right;
-    \\stroke diag uppercase_left uppercase_top-1 uppercase_right base+1;
-);
-
-pub const Z = lex.parseOps(
-    \\clip left=uppercase_left-1 right=uppercase_right+1 top=uppercase_top-1 bottom=base+1;
-    \\stroke horz uppercase_top;
-    \\stroke horz base;
-    \\stroke diag uppercase_left base-1 uppercase_right uppercase_top+1;
-);
 
 pub const O = [_]Op{
     .{ .op = .{

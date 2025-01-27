@@ -35,7 +35,7 @@ pub fn countOpsCt(comptime s: []const u8) usize {
     };
 }
 
-pub fn parseOps(comptime s: []const u8) [countOpsCt(s)]design.Op {
+pub fn parseOps(comptime s: []const u8) ![countOpsCt(s)]design.Op {
     const op_count = comptime countOpsCt(s);
     var ops: [op_count]design.Op = undefined;
     var offset: usize = 0;
