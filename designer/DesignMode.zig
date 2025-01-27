@@ -273,11 +273,11 @@ fn updateOp(self: *DesignMode, direction: enum { left, right }) void {
 fn getDefault(op: celltype.design.Op2Tag) celltype.design.Op {
     return switch (op) {
         .todo => .{ .op = .todo },
-        .clip => .{ .op = .{ .clip = .{ .left = .{ .base = .center }, .top = .{ .base = .baseline_stroke } } } },
+        .clip => .{ .op = .{ .clip = .{ .left = .{ .base = .center }, .top = .{ .base = .base } } } },
         .stroke_vert => .{ .op = .{ .stroke_vert = .{ .x = .{ .base = .center } } } },
-        .stroke_horz => .{ .op = .{ .stroke_horz = .{ .y = .{ .base = .baseline_stroke } } } },
+        .stroke_horz => .{ .op = .{ .stroke_horz = .{ .y = .{ .base = .base } } } },
         .stroke_diag => .{ .op = .{ .stroke_diag = .{
-            .a = .{ .x = .{ .base = .uppercase_left }, .y = .{ .base = .baseline_stroke } },
+            .a = .{ .x = .{ .base = .uppercase_left }, .y = .{ .base = .base } },
             .b = .{ .x = .{ .base = .uppercase_right }, .y = .{ .base = .uppercase_top } },
         } } },
         .stroke_dot => .{ .op = .{ .stroke_dot = .{
@@ -286,7 +286,7 @@ fn getDefault(op: celltype.design.Op2Tag) celltype.design.Op {
         } } },
         .stroke_curve => .{ .op = .{ .stroke_curve = .{
             .start = .{ .x = .{ .base = .uppercase_left }, .y = .{ .base = .lowercase_top } },
-            .control = .{ .x = .{ .base = .center }, .y = .{ .base = .baseline_stroke } },
+            .control = .{ .x = .{ .base = .center }, .y = .{ .base = .base } },
             .end = .{ .x = .{ .base = .uppercase_right }, .y = .{ .base = .lowercase_top } },
         } } },
     };

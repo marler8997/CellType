@@ -23,7 +23,7 @@ CellType is a new font technology that reimagines how digital fonts are defined 
 
 ## Named Coordinate System
 
-Traditional font technologies like TrueType use a fixed design coordinate system where glyph points are positioned using absolute values. CellType replaces this with a named coordinate system. Instead of fixed values, positions are defined using semantic names like "baseline_stroke". These named coordinates can be dynamically mapped to different pixel values at runtime, enabling flexible font adjustment.
+Traditional font technologies like TrueType use a fixed design coordinate system where glyph points are positioned using absolute values. CellType replaces this with a named coordinate system. Instead of fixed values, positions are defined using semantic names like "uppercase_top". These named coordinates can be dynamically mapped to different pixel values at runtime, enabling flexible font adjustment.
 
 ## Stroke-Based Primitives
 

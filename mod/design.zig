@@ -17,7 +17,7 @@ pub const BoundaryBaseY = enum {
     uppercase_center,
     uppercase_bottom_quarter,
     /// center of a stroke where the bottom touches the baseline
-    baseline_stroke,
+    base,
 };
 
 pub const BetweenX = struct {

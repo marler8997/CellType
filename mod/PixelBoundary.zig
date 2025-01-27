@@ -66,7 +66,7 @@ pub fn fromDesignBaseY(h: i32, stroke_width: i32, y: design.BoundaryBaseY) Pixel
         .uppercase_top => 0.2,
         .uppercase_top_quarter => {
             const top = fromDesignBaseY(h, stroke_width, .uppercase_top);
-            const baseline = fromDesignBaseY(h, stroke_width, .baseline_stroke);
+            const baseline = fromDesignBaseY(h, stroke_width, .base);
             return top.between(baseline, 0.25);
         },
         .lowercase_dot => return fromDesignBaseY(
@@ -84,15 +84,15 @@ pub fn fromDesignBaseY(h: i32, stroke_width: i32, y: design.BoundaryBaseY) Pixel
             stroke_width,
             .uppercase_top,
         ).between(
-            fromDesignBaseY(h, stroke_width, .baseline_stroke),
+            fromDesignBaseY(h, stroke_width, .base),
             0.5,
         ),
         .uppercase_bottom_quarter => {
             const top = fromDesignBaseY(h, stroke_width, .uppercase_top);
-            const baseline = fromDesignBaseY(h, stroke_width, .baseline_stroke);
+            const baseline = fromDesignBaseY(h, stroke_width, .base);
             return top.between(baseline, 0.75);
         },
-        .baseline_stroke => 0.71,
+        .base => 0.71,
     };
     return PixelBoundary.initFloat(large_enough_ratio * @as(f32, @floatFromInt(h)));
 }

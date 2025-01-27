@@ -313,9 +313,9 @@ test {
         design.Op{ .op = .{ .clip = .{
             .left = .{ .base = .center, .half_stroke_adjust = 1 },
             .right = .{ .base = .uppercase_right, .half_stroke_adjust = -3 },
-            .top = .{ .base = .baseline_stroke },
+            .top = .{ .base = .base },
         } } },
-        (try parseOp("clip left=center+1 right=uppercase_right-3 top=baseline_stroke;", &err, 0)).?[0],
+        (try parseOp("clip left=center+1 right=uppercase_right-3 top=base;", &err, 0)).?[0],
     );
     try std.testing.expectEqual(
         design.Op{ .op = .{ .stroke_vert = .{
