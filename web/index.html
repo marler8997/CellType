@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>CellType Demo</title>
+    <style>
+        * { margin:0; padding:0 }
+        h1 { margin: 40px }
+        body { background: #222; color:#fff; text-align:center }
+        .code {
+            background:#111;
+            text-align:left;
+            width:50em;
+            border:1px solid #aaa;
+            margin-left:auto;
+            margin-right:auto;
+        }
+        canvas {
+            margin-left: auto;
+            margin-right: auto;
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div id="AppDiv">
+        <h1>CellType Demo</h1>
+        <canvas id="glCanvas" width="640" height="480"></canvas>
+    </div>
+    <script>
+        const vsSource = `
+attribute vec2 aCorner;
+attribute vec2 aCenter;
+attribute float aColorIndex;
+
+varying lowp float vColorIndex;
+
+void main() {
+    vec2 position = aCenter + aCorner;
+    gl_Position = vec4(position, 0.0, 1.0);
+    vColorIndex = aColorIndex;
+}
+        `;
+
+        const fsSource = `
+precision mediump float;
+varying lowp float vColorIndex;
+
+void main() {
+    vec4 color;
+    if (vColorIndex == 0.0) {
+        color = vec4(1.0, 0.0, 0.0, 1.0); // Red
+    } else if (vColorIndex == 1.0) {
+        color = vec4(0.0, 0.0, 1.0, 1.0); // Blue
+    } else {
+        color = vec4(1.0, 1.0, 1.0, 1.0); // White (default)
+    }
+    gl_FragColor = color;
+}
+        `;
+
+        function addLineNumbers(text) {
+            const lines = text.split('\n');
+            const width = String(lines.length).length; // Get width needed for largest number
+            return lines
+                .map((line, index) =>
+                    `${String(index + 1).padStart(width)}|${line}`
+                )
+                .join('\n');
+        }
+        function shaderKind(gl, type) {
+                    if (type == gl.VERTEX_SHADER) return "Vertex";
+            if (type == gl.FRAGMENT_SHADER) return "Fragment";
+            return "";
+        }
+        function compileShader(gl, type, source) {
+            const shader = gl.createShader(type);
+            gl.shaderSource(shader, source.trim());
+            gl.compileShader(shader);
+            if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+                const kind = shaderKind(gl, type);
+                setError(
+                   errorTitle("Bad " + kind + " Shader") +
+                   codeBlock(gl.getShaderInfoLog(shader)) +
+                   '<br/><h2>' + kind + ' Shader Source:</h2><br/>' +
+                   codeBlock(addLineNumbers(source.trim()))
+                );
+                gl.deleteShader(shader);
+                return null;
+            }
+            return shader;
+        }
+
+        function errorTitle(title) {
+            return '<h1 style="color:red">' + title + '</h1>';
+        }
+        function codeBlock(code) {
+            return '<pre class="code">' + code + '</pre>';
+        }
+        function setError(error) {
+            document.getElementById("AppDiv").innerHTML = error;
+            return;
+        }
+
+        function init() {
+            const canvas = document.getElementById("glCanvas");
+            const gl = canvas.getContext("webgl");
+            if (!gl) {
+                setError(
+                    errorTitle("WebGL Error") +
+                    '<p>getContext("webgl") returned NULL, this browser may not support WebGL.</p>'
+                );
+                return;
+            }
+
+            const vertexShader = compileShader(gl, gl.VERTEX_SHADER, vsSource);
+            if (!vertexShader) return;
+            const fragmentShader = compileShader(gl, gl.FRAGMENT_SHADER, fsSource);
+            if (!fragmentShader) return;
+
+            const shaderProgram = gl.createProgram();
+            gl.attachShader(shaderProgram, vertexShader);
+            gl.attachShader(shaderProgram, fragmentShader);
+            gl.linkProgram(shaderProgram);
+
+            if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
+                setError(
+                    errorTitle('Shader Link Error') +
+                    codeBlock(gl.getProgramInfoLog(shaderProgram))
+                );
+                return;
+            }
+
+            // Define the shared corners for a rectangle (width = 0.25, height = 1.0)
+            const corners = new Float32Array([
+                -0.125, -0.3,  // Bottom left
+                -0.125,  0.5,  // Top left
+                 0.125, -0.3,  // Bottom right
+                 0.125,  0.5   // Top right
+            ]);
+
+            // Define the center positions for each rectangle
+            const centers = new Float32Array([
+                -0.3, 0.0,  // Left rectangle center
+                0.3, 0.2    // Right rectangle center
+            ]);
+
+            // Define colors as indices (0 = red, 1 = blue)
+            const colorIndices = new Float32Array([
+                0,  // Left rectangle color (red)
+                1   // Right rectangle color (blue)
+            ]);
+
+            const cornerBuffer = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, cornerBuffer);
+            gl.bufferData(gl.ARRAY_BUFFER, corners, gl.STATIC_DRAW);
+
+            const centerBuffer = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, centerBuffer);
+            gl.bufferData(gl.ARRAY_BUFFER, centers, gl.STATIC_DRAW);
+
+            const colorBuffer = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
+            gl.bufferData(gl.ARRAY_BUFFER, colorIndices, gl.STATIC_DRAW);
+
+            // Render
+            gl.clearColor(0.0, 0.0, 0.0, 1.0);
+            gl.clear(gl.COLOR_BUFFER_BIT);
+
+            gl.useProgram(shaderProgram);
+
+            // Set up corner attribute
+            const cornerAttributeLocation = gl.getAttribLocation(shaderProgram, "aCorner");
+            gl.bindBuffer(gl.ARRAY_BUFFER, cornerBuffer);
+            gl.vertexAttribPointer(cornerAttributeLocation, 2, gl.FLOAT, false, 0, 0);
+            gl.enableVertexAttribArray(cornerAttributeLocation);
+
+            // Set up center attribute
+            const centerAttributeLocation = gl.getAttribLocation(shaderProgram, "aCenter");
+            gl.bindBuffer(gl.ARRAY_BUFFER, centerBuffer);
+            gl.vertexAttribPointer(centerAttributeLocation, 2, gl.FLOAT, false, 0, 0);
+            gl.enableVertexAttribArray(centerAttributeLocation);
+
+            // Set up color attribute
+            const colorAttributeLocation = gl.getAttribLocation(shaderProgram, "aColorIndex");
+            gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
+            gl.vertexAttribPointer(colorAttributeLocation, 1, gl.FLOAT, false, 0, 0);
+            gl.enableVertexAttribArray(colorAttributeLocation);
+
+            // Enable instancing for center and color attributes
+            const ext = gl.getExtension('ANGLE_instanced_arrays');
+            ext.vertexAttribDivisorANGLE(centerAttributeLocation, 1);
+            ext.vertexAttribDivisorANGLE(colorAttributeLocation, 1);
+
+            // Draw the instances
+            ext.drawArraysInstancedANGLE(gl.TRIANGLE_STRIP, 0, 4, 2);  // 4 vertices per rectangle, 2 rectangles
+        }
+
+        init();
+    </script>
+</body>
+</html>
