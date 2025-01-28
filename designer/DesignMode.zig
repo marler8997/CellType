@@ -26,6 +26,7 @@ const ViewInput = struct {
     cell_size: XY(u16),
     stroke_width: u16,
     cell_pixel_size: i32,
+    grid_line_size: i32,
 };
 
 const ViewLayout = struct {
@@ -33,6 +34,7 @@ const ViewLayout = struct {
     cell_size: XY(u16),
     stroke_width: u16,
     cell_pixel_size: i32,
+    grid_line_size: i32,
     zoom_out_button: app.Rect,
     zoom_in_button: app.Rect,
     pixel_grid: app.Rect,
@@ -41,7 +43,8 @@ const ViewLayout = struct {
             //self.position.eql(input.position) and
             self.cell_size.eql(input.cell_size) and
             self.stroke_width == input.stroke_width and
-            self.cell_pixel_size == input.cell_pixel_size;
+            self.cell_pixel_size == input.cell_pixel_size and
+            self.grid_line_size == input.grid_line_size;
     }
 };
 
@@ -217,6 +220,7 @@ fn updateLayout(
             .cell_size = view_input.cell_size,
             .stroke_width = view_input.stroke_width,
             .cell_pixel_size = view_input.cell_pixel_size,
+            .grid_line_size = view_input.grid_line_size,
             .zoom_out_button = .{
                 .left = window_margin,
                 .top = zoom_top,
@@ -368,16 +372,23 @@ pub fn render(
     if (self.add_default_views) {
         self.add_default_views = false;
         if (self.view_inputs.items.len == 0) {
-            const cell_pixel_size: i32 = @intFromFloat(@round(render_scale * 10.0));
             self.view_inputs.append(self.arena.allocator(), .{
                 .cell_size = .{ .x = 10, .y = 20 },
-                .cell_pixel_size = cell_pixel_size,
                 .stroke_width = 2,
+                .cell_pixel_size = pxFromPt(render_scale, 10),
+                .grid_line_size = pxFromPt(render_scale, 1.0),
             }) catch |e| oom(e);
             self.view_inputs.append(self.arena.allocator(), .{
                 .cell_size = .{ .x = 20, .y = 36 },
-                .cell_pixel_size = cell_pixel_size,
                 .stroke_width = 3,
+                .cell_pixel_size = pxFromPt(render_scale, 8.0),
+                .grid_line_size = pxFromPt(render_scale, 1.0),
+            }) catch |e| oom(e);
+            self.view_inputs.append(self.arena.allocator(), .{
+                .cell_size = .{ .x = 100, .y = 160 },
+                .stroke_width = 1,
+                .cell_pixel_size = 2,
+                .grid_line_size = 0,
             }) catch |e| oom(e);
         }
     }
@@ -415,8 +426,6 @@ pub fn render(
             self.ops.items,
         );
 
-        const grid_line_size: i32 = pxFromPt(render_scale, 1.0);
-
         {
             var y: i32 = view.pixel_grid.top;
             for (0..@intCast(view.cell_size.y)) |row| {
@@ -425,9 +434,9 @@ pub fn render(
                         .left = view.pixel_grid.left,
                         .top = y,
                         .right = view.pixel_grid.right,
-                        .bottom = y + grid_line_size,
+                        .bottom = y + view.grid_line_size,
                     });
-                    y += grid_line_size;
+                    y += view.grid_line_size;
                 }
                 const row_offset: usize = @as(usize, view.cell_size.x) * row;
 
@@ -437,10 +446,10 @@ pub fn render(
                         target.fillRect(.grid_line, .{
                             .left = x,
                             .top = y,
-                            .right = x + grid_line_size,
+                            .right = x + view.grid_line_size,
                             .bottom = y + view.cell_pixel_size,
                         });
-                        x += grid_line_size;
+                        x += view.grid_line_size;
                     }
                     const shade = self.grayscale.items[row_offset + col];
                     target.fillRect(.{ .shade = shade }, .{
