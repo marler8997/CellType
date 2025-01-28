@@ -30,7 +30,7 @@ pub fn build(b: *std.Build) void {
         .{ .name = "glyphs", .module = glyphs_mod },
     };
     const celltype_mod = b.addModule("celltype", .{
-        .root_source_file = b.path("render/mod.zig"),
+        .root_source_file = b.path("render/render.zig"),
         .imports = &render_imports,
     });
 
