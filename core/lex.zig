@@ -104,7 +104,20 @@ pub fn parseOp(s: []const u8, out_err: *Error, start: usize) error{Error}!?struc
                 try expectToken(s, out_err, offset, .semicolon),
             };
         } else if (std.mem.eql(u8, stroke_kind_str, "curve")) {
-            @panic("todo");
+            const x0, var offset = try parseBoundary(s, out_err, stroke_kind_token.end, .top_level, .x);
+            const y0, offset = try parseBoundary(s, out_err, offset, .top_level, .y);
+            const x1, offset = try parseBoundary(s, out_err, offset, .top_level, .x);
+            const y1, offset = try parseBoundary(s, out_err, offset, .top_level, .y);
+            const x2, offset = try parseBoundary(s, out_err, offset, .top_level, .x);
+            const y2, offset = try parseBoundary(s, out_err, offset, .top_level, .y);
+            return .{
+                .{ .op = .{ .stroke_curve = .{
+                    .start = .{ .x = x0, .y = y0 },
+                    .control = .{ .x = x1, .y = y1 },
+                    .end = .{ .x = x2, .y = y2 },
+                } } },
+                try expectToken(s, out_err, offset, .semicolon),
+            };
         } else return out_err.set(.{ .unexpected_token = stroke_kind_token });
     }
     return out_err.set(.{ .unexpected_token = op_kind_token });
@@ -367,5 +380,28 @@ test {
             .between = .{ .to = .{ .base = .uppercase_right, .adjust = 5 }, .ratio = 0.5 },
         } } } },
         (try parseOp("stroke vert between(center-3 uppercase_right+5 0.5);", &err, 0)).?[0],
+    );
+    try std.testing.expectEqual(
+        design.Op{ .op = .{ .stroke_curve = .{
+            .start = .{
+                .x = .{ .value = .{ .base = .uppercase_left } },
+                .y = .{ .value = .{ .base = .uppercase_center } },
+            },
+            .control = .{
+                .x = .{ .value = .{ .base = .center } },
+                .y = .{ .value = .{ .base = .base } },
+            },
+            .end = .{
+                .x = .{ .value = .{ .base = .uppercase_right } },
+                .y = .{ .value = .{ .base = .uppercase_top } },
+            },
+        } } },
+        (try parseOp(
+            \\stroke curve
+            \\    uppercase_left uppercase_center
+            \\    center base
+            \\    uppercase_right uppercase_top
+            \\;
+        , &err, 0)).?[0],
     );
 }

@@ -145,6 +145,11 @@
 #    } },
 #};
 #
+--- i
+clip bottom=base+1;
+stroke dot center lowercase_dot;
+clip top=lowercase_top-1;
+stroke vert center;
 --- A
 clip top=uppercase_top-1 bottom=base+1;
 stroke diag uppercase_left base center uppercase_top-1;
@@ -195,49 +200,33 @@ clip left=uppercase_left-1 right=uppercase_right+1 top=uppercase_top-1 bottom=ba
 stroke vert uppercase_left;
 stroke vert uppercase_right;
 stroke diag uppercase_left uppercase_top-1 uppercase_right base+1;
+--- O
+stroke curve
+    uppercase_left uppercase_center
+    uppercase_left uppercase_top
+    center uppercase_top
+;
+stroke curve
+    uppercase_right uppercase_center
+    uppercase_right uppercase_top
+    center uppercase_top
+;
+stroke curve
+    uppercase_left uppercase_center
+    uppercase_left base
+    center base
+;
+stroke curve
+    uppercase_right uppercase_center
+    uppercase_right base
+    center base
+;
 --- T
 clip left=uppercase_left-1 right=uppercase_right+1 top=uppercase_top-1 bottom=base+1;
 stroke vert center;
 stroke horz uppercase_top;
---- i
-clip bottom=base+1;
-stroke dot center lowercase_dot;
-clip top=lowercase_top-1;
-stroke vert center;
 --- Z
 clip left=uppercase_left-1 right=uppercase_right+1 top=uppercase_top-1 bottom=base+1;
 stroke horz uppercase_top;
 stroke horz base;
 stroke diag uppercase_left base-1 uppercase_right uppercase_top+1;
-
-#pub const O = [_]Op{
-#    .{ .op = .{
-#        .stroke_curve = .{
-#            .start = .{ .x = .{ .base = .uppercase_left }, .y = .{ .base = .uppercase_center } },
-#            .control = .{ .x = .{ .base = .uppercase_left }, .y = .{ .base = .uppercase_top } },
-#            .end = .{ .x = .{ .base = .center }, .y = .{ .base = .uppercase_top } },
-#        },
-#    } },
-#    .{ .op = .{
-#        .stroke_curve = .{
-#            .start = .{ .x = .{ .base = .uppercase_right }, .y = .{ .base = .uppercase_center } },
-#            .control = .{ .x = .{ .base = .uppercase_right }, .y = .{ .base = .uppercase_top } },
-#            .end = .{ .x = .{ .base = .center }, .y = .{ .base = .uppercase_top } },
-#        },
-#    } },
-#    .{ .op = .{
-#        .stroke_curve = .{
-#            .start = .{ .x = .{ .base = .uppercase_left }, .y = .{ .base = .uppercase_center } },
-#            .control = .{ .x = .{ .base = .uppercase_left }, .y = .{ .base = .base } },
-#            .end = .{ .x = .{ .base = .center }, .y = .{ .base = .base } },
-#        },
-#    } },
-#    .{ .op = .{
-#        .stroke_curve = .{
-#            .start = .{ .x = .{ .base = .uppercase_right }, .y = .{ .base = .uppercase_center } },
-#            .control = .{ .x = .{ .base = .uppercase_right }, .y = .{ .base = .base } },
-#            .end = .{ .x = .{ .base = .center }, .y = .{ .base = .base } },
-#        },
-#    } },
-#};
-#
