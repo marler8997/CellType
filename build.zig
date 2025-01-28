@@ -15,7 +15,7 @@ pub fn build(b: *std.Build) void {
             .target = b.host,
         });
         const run = b.addRunArtifact(exe);
-        run.addFileArg(b.path("codegen/glyphs"));
+        run.addFileArg(b.path("glyphs"));
         const glyphs_src = run.addOutputFileArg("glyphs.zig");
         break :blk b.createModule(.{
             .root_source_file = glyphs_src,
