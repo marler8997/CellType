@@ -259,8 +259,8 @@ const shaders = struct {
     }
     fn stroke_diag(w: i32, h: i32, stroke_width: i32, col: i32, row: i32, args: *const design.StrokeDiag) ShaderResult {
         const pixel: Coord(f32) = .{
-            .x = @floatFromInt(col),
-            .y = @floatFromInt(row),
+            .x = @as(f32, @floatFromInt(col)) + 0.5,
+            .y = @as(f32, @floatFromInt(row)) + 0.5,
         };
         const a: Coord(f32) = .{
             .x = @floatFromInt(PixelBoundary.fromDesignX(w, stroke_width, args.a.x).getRounded()),
