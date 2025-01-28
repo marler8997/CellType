@@ -3,8 +3,8 @@ const design = @import("design.zig");
 
 pub const Error = union(enum) {
     invalid_char: usize,
-    bad_number: Token,
     unexpected_token: Token,
+    bad_number: Token,
     duplicate_property: Token,
     recursive_between: Token,
 
@@ -32,8 +32,9 @@ pub fn countOpsCt(comptime s: []const u8) usize {
             .{ std.zig.fmtEscapes(s[offset..][0..1]), s[offset], offset, s },
         )),
         .unexpected_token => |token| @compileError("unexpected token '" ++ s[token.start..token.end] ++ "' at offset " ++ std.fmt.comptimePrint("{}", .{token.start}) ++ " of string: " ++ s),
+        .bad_number => |value| @compileError(std.fmt.comptimePrint("number overflow '{}'", .{value})),
         .duplicate_property => |token| @compileError("duplicated property '" ++ s[token.start..token.end] ++ "'"),
-        .overflow => |value| @compileError(std.fmt.comptimePrint("number overflow '{}'", .{value})),
+        .recursive_between => @compileError("recursive between"),
     };
 }
 

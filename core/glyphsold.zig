@@ -1,23 +1,5 @@
 const Op = @import("design.zig").Op;
 
-pub const @"0" = zero_o_shared(.number_top) ++ [_]Op{
-    .{ .op = .{ .clip = .{
-        .count = 1,
-        .left = .{ .value = .{ .base = .std_left, .adjust = 1 } },
-        .right = .{ .value = .{ .base = .std_right, .adjust = -1 } },
-    } } },
-    // TODO: mark this stroke as "thinner", or maybe, we could make this a "half stroke" width?
-    .{ .op = .{ .stroke_diag = .{
-        .a = .{
-            .x = .{ .value = .{ .base = .std_left } },
-            .y = .{ .value = .{ .base = .number_top }, .between = .{ .to = .{ .base = .base }, .ratio = 0.70 } },
-        },
-        .b = .{
-            .x = .{ .value = .{ .base = .std_right } },
-            .y = .{ .value = .{ .base = .number_top }, .between = .{ .to = .{ .base = .base }, .ratio = 0.30 } },
-        },
-    } } },
-};
 pub const @"1" = [_]Op{
     .{ .op = .{ .clip = .{
         .top = .{ .value = .{ .base = .number_top, .adjust = -1 } },
@@ -152,38 +134,3 @@ pub const @"3" = [_]Op{
         },
     } },
 };
-
-pub const O = zero_o_shared(.uppercase_top);
-
-fn zero_o_shared(top: @import("design.zig").BoundaryBaseY) [4]Op {
-    return [_]Op{
-        .{ .op = .{
-            .stroke_curve = .{
-                .start = .{ .x = .{ .value = .{ .base = .std_left } }, .y = .{ .value = .{ .base = .uppercase_center } } },
-                .control = .{ .x = .{ .value = .{ .base = .std_left } }, .y = .{ .value = .{ .base = top } } },
-                .end = .{ .x = .{ .value = .{ .base = .center } }, .y = .{ .value = .{ .base = top } } },
-            },
-        } },
-        .{ .op = .{
-            .stroke_curve = .{
-                .start = .{ .x = .{ .value = .{ .base = .std_right } }, .y = .{ .value = .{ .base = .uppercase_center } } },
-                .control = .{ .x = .{ .value = .{ .base = .std_right } }, .y = .{ .value = .{ .base = top } } },
-                .end = .{ .x = .{ .value = .{ .base = .center } }, .y = .{ .value = .{ .base = top } } },
-            },
-        } },
-        .{ .op = .{
-            .stroke_curve = .{
-                .start = .{ .x = .{ .value = .{ .base = .std_left } }, .y = .{ .value = .{ .base = .uppercase_center } } },
-                .control = .{ .x = .{ .value = .{ .base = .std_left } }, .y = .{ .value = .{ .base = .base } } },
-                .end = .{ .x = .{ .value = .{ .base = .center } }, .y = .{ .value = .{ .base = .base } } },
-            },
-        } },
-        .{ .op = .{
-            .stroke_curve = .{
-                .start = .{ .x = .{ .value = .{ .base = .std_right } }, .y = .{ .value = .{ .base = .uppercase_center } } },
-                .control = .{ .x = .{ .value = .{ .base = .std_right } }, .y = .{ .value = .{ .base = .base } } },
-                .end = .{ .x = .{ .value = .{ .base = .center } }, .y = .{ .value = .{ .base = .base } } },
-            },
-        } },
-    };
-}

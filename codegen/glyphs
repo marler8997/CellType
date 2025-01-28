@@ -1,3 +1,30 @@
+--- 0
+stroke curve
+    std_left number_center
+    std_left number_top
+    center number_top
+;
+stroke curve
+    std_right number_center
+    std_right number_top
+    center number_top
+;
+stroke curve
+    std_left number_center
+    std_left base
+    center base
+;
+stroke curve
+    std_right number_center
+    std_right base
+    center base
+;
+clip left=std_left+1 right=std_right-1;
+# TODO: mark this stroke as "thinner", or maybe, we could make this a "half stroke" width?
+stroke diag
+    std_left between(number_top base 0.70)
+    std_right between(number_top base 0.30)
+;
 --- i
 clip bottom=base+1;
 stroke dot center lowercase_dot;
