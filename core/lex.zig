@@ -63,6 +63,7 @@ pub fn parseOp(s: []const u8, out_err: *Error, start: usize) error{Error}!?struc
         }),
     }
     const op_kind_token_str = s[op_kind_token.start..op_kind_token.end];
+
     if (std.mem.eql(u8, op_kind_token_str, "clip")) {
         const clip, const offset = try parseClip(s, out_err, op_kind_token.end);
         return .{ .{ .clip = clip }, offset };
@@ -122,7 +123,47 @@ pub fn parseOp(s: []const u8, out_err: *Error, start: usize) error{Error}!?struc
         } else return out_err.set(.{ .unexpected_token = stroke_kind_token });
     }
 
+    if (std.mem.eql(u8, op_kind_token_str, "condition")) {
+        const count, const count_end = try parseUint(s, out_err, op_kind_token.end, u8, .{ .min = 1 });
+        const condition, const condition_end = try parseEnum(s, out_err, count_end, design.Condition);
+        const end = try expectToken(s, out_err, condition_end, .semicolon);
+        return .{ .{ .branch = .{ .count = count, .condition = condition } }, end };
+    }
+
     return out_err.set(.{ .unexpected_token = op_kind_token });
+}
+
+fn parseUint(
+    s: []const u8,
+    out_err: *Error,
+    start: usize,
+    comptime Uint: type,
+    opt: struct { min: Uint = 0 },
+) error{Error}!struct { Uint, usize } {
+    const num_token = try nextToken(s, out_err, start);
+    if (num_token.kind != .num) return out_err.set(.{ .unexpected_token = num_token });
+    const num_token_str = s[num_token.start..num_token.end];
+    const num_val = std.fmt.parseInt(Uint, num_token_str, 10) catch return out_err.set(
+        .{ .bad_number = num_token },
+    );
+    if (num_val < opt.min) return out_err.set(.{ .bad_number = num_token });
+    return .{ num_val, num_token.end };
+}
+
+fn parseEnum(
+    s: []const u8,
+    out_err: *Error,
+    start: usize,
+    comptime Enum: type,
+) error{Error}!struct { Enum, usize } {
+    const token = try nextToken(s, out_err, start);
+    if (token.kind != .id) return out_err.set(.{ .unexpected_token = token });
+    const token_str = s[token.start..token.end];
+    inline for (std.meta.fields(Enum)) |field| {
+        if (std.mem.eql(u8, token_str, field.name))
+            return .{ @enumFromInt(field.value), token.end };
+    }
+    return out_err.set(.{ .unexpected_token = token });
 }
 
 fn parseClip(
@@ -159,15 +200,7 @@ fn parseClip(
         } else if (std.mem.eql(u8, property, "count")) {
             if (clip.count != 0) return out_err.set(.{ .duplicate_property = property_token });
             const eq_end = try expectToken(s, out_err, property_token.end, .eq);
-            const num_token = try nextToken(s, out_err, eq_end);
-            if (num_token.kind != .num) return out_err.set(.{ .unexpected_token = num_token });
-            const num_token_str = s[num_token.start..num_token.end];
-            const num_u8 = std.fmt.parseInt(u8, num_token_str, 10) catch return out_err.set(
-                .{ .bad_number = num_token },
-            );
-            if (num_u8 == 0) return out_err.set(.{ .bad_number = num_token });
-            clip.count = num_u8;
-            offset = num_token.end;
+            clip.count, offset = try parseUint(s, out_err, eq_end, u8, .{ .min = 1 });
         } else return out_err.set(.{ .unexpected_token = property_token });
     }
 }
@@ -317,7 +350,9 @@ fn nextToken(s: []const u8, out_err: *Error, start: usize) error{Error}!Token {
             '=' => .{ .kind = .eq, .start = offset, .end = offset + 1 },
             '>'...'@' => out_err.set(.{ .invalid_char = offset }),
             'A'...'Z' => .{ .kind = .id, .start = offset, .end = scan(s, offset + 1, isIdChar) },
-            '['...'`' => out_err.set(.{ .invalid_char = offset }),
+            '['...'^' => out_err.set(.{ .invalid_char = offset }),
+            '_' => .{ .kind = .id, .start = offset, .end = scan(s, offset + 1, isIdChar) },
+            '`' => out_err.set(.{ .invalid_char = offset }),
             'a'...'z' => .{ .kind = .id, .start = offset, .end = scan(s, offset + 1, isIdChar) },
             '{'...255 => @panic("todo"),
         };
@@ -412,5 +447,10 @@ test {
             \\    std_right uppercase_top
             \\;
         , &err, 0)).?[0],
+    );
+
+    try std.testing.expectEqual(
+        design.Op{ .branch = .{ .count = 2, .condition = .serif } },
+        (try parseOp("condition 2 serif;", &err, 0)).?[0],
     );
 }

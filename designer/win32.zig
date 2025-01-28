@@ -60,6 +60,7 @@ pub fn main() !u8 {
     var designfile_watch: DirectoryWatch = undefined;
     var designfile_name: []const u8 = undefined;
     var opt: struct {
+        serif: bool = true,
         designfile: ?[]const u8 = null,
     } = .{};
 
@@ -70,7 +71,11 @@ pub fn main() !u8 {
         while (index < cmdline.len) {
             const arg = cmdline[index];
             index += 1;
-            if (std.mem.eql(u8, arg, "--design")) {
+            if (false) {
+                //
+            } else if (std.mem.eql(u8, arg, "--noserif")) {
+                opt.serif = false;
+            } else if (std.mem.eql(u8, arg, "--design")) {
                 app.exec(.design_mode);
             } else if (std.mem.eql(u8, arg, "--designfile")) {
                 if (index >= cmdline.len) @panic("--designfile requires an argument");
@@ -131,6 +136,8 @@ pub fn main() !u8 {
             } else std.debug.panic("unknown cmdline option '{s}'", .{arg});
         }
     }
+
+    app.init(.{ .serif = opt.serif });
 
     {
         const options: win32.D2D1_FACTORY_OPTIONS = .{

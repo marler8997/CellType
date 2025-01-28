@@ -22,7 +22,12 @@ pub const global = struct {
 
     var font_weight: f32 = celltype.default_weight;
     pub var text: TextArray = TextArray.fromSlice("HiNZ0123") catch unreachable;
+    var serif: bool = true;
 };
+
+pub fn init(opt: struct { serif: bool }) void {
+    global.serif = opt.serif;
+}
 
 pub fn setDesignFile(file: []const u8) void {
     global.design_mode.setDesignFile(file);
@@ -223,7 +228,7 @@ fn renderViewMode(target: root.RenderTarget, scale: f32, render_size: XY(i32)) v
         var grapheme_offset: usize = 0;
         while (grapheme_offset < graphemes.len) {
             const config: celltype.Config = .{
-                .serif = true,
+                .serif = global.serif,
             };
             const stroke_width = blk: {
                 // good for testing

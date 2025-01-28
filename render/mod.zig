@@ -123,7 +123,6 @@ fn getOps(grapheme_utf8: []const u8) error{Utf8Decode}!struct { usize, []const d
     if (std.math.cast(u8, codepoint)) |codepoint_u8| switch (codepoint_u8) {
         inline else => |c| {
             if (@hasDecl(glyphs, &[_]u8{c})) return .{ utf8_len, &@field(glyphs, &[_]u8{c}) };
-            if (@hasDecl(core.glyphsold, &[_]u8{c})) return .{ utf8_len, &@field(core.glyphsold, &[_]u8{c}) };
         },
     };
     return .{ utf8_len, &todo };

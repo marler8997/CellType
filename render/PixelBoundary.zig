@@ -95,7 +95,6 @@ pub fn fromDesignBaseY(h: i32, stroke_width: i32, y: design.BoundaryBaseY) Pixel
             const baseline = fromDesignBaseY(h, stroke_width, .base);
             return top.between(baseline, 0.25);
         },
-        ._1_slanty_bottom => 0.266,
         .uppercase_center => return fromDesignBaseY(
             h,
             stroke_width,

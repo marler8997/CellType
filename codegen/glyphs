@@ -25,6 +25,14 @@ stroke diag
     std_left between(number_top base 0.70)
     std_right between(number_top base 0.30)
 ;
+--- 1
+clip top=number_top-1 bottom=base+1;
+clip count=1 left=std_left-1 right=center+1;
+stroke diag std_left between(uppercase_top uppercase_center 0.3) center-1 number_top;
+stroke vert center;
+clip left=std_left-1 right=std_right+1;
+condition 1 serif;
+stroke horz base;
 --- 2
 clip left=std_left-1 right=std_right+1;
 stroke horz base;
