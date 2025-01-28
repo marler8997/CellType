@@ -275,13 +275,17 @@ const shaders = struct {
             .x = @as(f32, @floatFromInt(col)) + 0.5,
             .y = @as(f32, @floatFromInt(row)) + 0.5,
         };
+        const extent_a_x = Extent.initStrokeX(w, stroke_width, args.a.x);
+        const extent_a_y = Extent.initStrokeY(h, stroke_width, args.a.y);
+        const extent_b_x = Extent.initStrokeX(w, stroke_width, args.b.x);
+        const extent_b_y = Extent.initStrokeY(h, stroke_width, args.b.y);
         const a: Coord(f32) = .{
-            .x = @floatFromInt(PixelBoundary.fromDesignX(w, stroke_width, args.a.x).getRounded()),
-            .y = @floatFromInt(PixelBoundary.fromDesignY(h, stroke_width, args.a.y).getRounded()),
+            .x = extent_a_x.center(),
+            .y = extent_a_y.center(),
         };
         const b: Coord(f32) = .{
-            .x = @floatFromInt(PixelBoundary.fromDesignX(w, stroke_width, args.b.x).getRounded()),
-            .y = @floatFromInt(PixelBoundary.fromDesignY(h, stroke_width, args.b.y).getRounded()),
+            .x = extent_b_x.center(),
+            .y = extent_b_y.center(),
         };
         const distance = pointToLineDistance(pixel, a, b);
         const half_stroke_width: f32 = @as(f32, @floatFromInt(stroke_width)) / 2.0;
@@ -305,23 +309,31 @@ const shaders = struct {
             stroke_width,
         );
     }
-    fn stroke_curve(w: i32, h: i32, stroke_width: i32, col: i32, row: i32, s: *const design.StrokeCurve) ShaderResult {
+    fn stroke_curve(w: i32, h: i32, stroke_width: i32, col: i32, row: i32, args: *const design.StrokeCurve) ShaderResult {
+        const extent_start_x = Extent.initStrokeX(w, stroke_width, args.start.x);
+        const extent_start_y = Extent.initStrokeY(h, stroke_width, args.start.y);
+        const extent_control_x = Extent.initStrokeX(w, stroke_width, args.control.x);
+        const extent_control_y = Extent.initStrokeY(h, stroke_width, args.control.y);
+        const extent_end_x = Extent.initStrokeX(w, stroke_width, args.end.x);
+        const extent_end_y = Extent.initStrokeY(h, stroke_width, args.end.y);
+
+        const half_stroke: f32 = @as(f32, @floatFromInt(stroke_width)) / 2.0;
         return shaderCurveCoords(
             col,
             row,
             .{
-                .x = @floatFromInt(PixelBoundary.fromDesignX(w, stroke_width, s.start.x).getRounded()),
-                .y = @floatFromInt(PixelBoundary.fromDesignY(h, stroke_width, s.start.y).getRounded()),
+                .x = extent_start_x.center(),
+                .y = extent_start_y.center(),
             },
             .{
-                .x = @floatFromInt(PixelBoundary.fromDesignX(w, stroke_width, s.control.x).getRounded()),
-                .y = @floatFromInt(PixelBoundary.fromDesignY(h, stroke_width, s.control.y).getRounded()),
+                .x = extent_control_x.center(),
+                .y = extent_control_y.center(),
             },
             .{
-                .x = @floatFromInt(PixelBoundary.fromDesignX(w, stroke_width, s.end.x).getRounded()),
-                .y = @floatFromInt(PixelBoundary.fromDesignY(h, stroke_width, s.end.y).getRounded()),
+                .x = extent_end_x.center(),
+                .y = extent_end_y.center(),
             },
-            @as(f32, @floatFromInt(stroke_width)) / 2.0,
+            half_stroke,
         );
     }
     fn todo(w: i32, h: i32, stroke_width: i32, col: i32, row: i32, args: *const void) ShaderResult {
