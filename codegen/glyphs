@@ -241,13 +241,13 @@ stroke curve
     center base
 ;
 stroke curve
-    between(std_right std_left 0.1) lowercase_center
-    between(std_right std_left 0.1) between(base lowercase_top 0.1)
+    std_right lowercase_center
+    std_right between(base lowercase_top 0.1)
     center base
 ;
 stroke curve
-    between(std_right std_left 0.1) lowercase_center
-    between(std_right std_left 0.1) between(lowercase_top base 0.1)
+    std_right lowercase_center
+    std_right between(lowercase_top base 0.1)
     center lowercase_top
 ;
 clip top=lowercase_top-1 bottom=base+1;
