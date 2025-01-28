@@ -202,6 +202,33 @@ stroke curve
     std_left between(number_top base 0.4)
     std_left between(number_top base 0.25)
 ;
+--- 9
+clip bottom=base+1;
+stroke curve
+    std_left between(number_top base 0.25)
+    std_left number_top
+    center number_top
+;
+stroke curve
+    std_right between(number_top base 0.25)
+    std_right number_top
+    center number_top
+;
+stroke curve
+    std_right between(number_top base 0.25)
+    std_right between(number_top base 0.5)
+    center between(number_top base 0.5)
+;
+stroke curve
+    std_left between(number_top base 0.25)
+    std_left between(number_top base 0.5)
+    center between(number_top base 0.5)
+;
+clip top=between(number_top base 0.4);
+stroke diag
+    between(std_right std_left 0.07) between(number_top base 0.4)
+    between(std_right std_left 0.6) base
+;
 --- i
 clip bottom=base+1;
 stroke dot center lowercase_dot;
