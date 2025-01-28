@@ -36,6 +36,7 @@ stroke horz base;
 --- 2
 clip left=std_left-1 right=std_right+1;
 stroke horz base;
+clip count=1 bottom=number_top_quarter;
 stroke curve
     std_left number_top_quarter
     std_left number_top
