@@ -174,12 +174,12 @@ stroke curve
 ;
 stroke curve
     center number_center
-    std_right between(number_top base 0.4)
+    between(std_right std_left 0.1) between(number_top base 0.4)
     std_right between(number_top base 0.25)
 ;
 stroke curve
     center number_center
-    std_left between(base number_top 0.4)
+    between(std_left std_right 0.1) between(base number_top 0.4)
     std_left between(base number_top 0.25)
 ;
 stroke curve
@@ -194,12 +194,12 @@ stroke curve
 ;
 stroke curve
     std_right between(base number_top 0.25)
-    std_right between(base number_top 0.4)
+    between(std_right std_left 0.1) between(base number_top 0.4)
     center number_center
 ;
 stroke curve
     center number_center
-    std_left between(number_top base 0.4)
+    between(std_left std_right 0.1) between(number_top base 0.4)
     std_left between(number_top base 0.25)
 ;
 --- 9
