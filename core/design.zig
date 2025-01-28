@@ -11,6 +11,7 @@ pub const BoundaryBaseY = enum {
     number_top,
     number_top_quarter,
     number_center,
+    number_bottom_quarter,
 
     /// center of uppercase top
     uppercase_top,

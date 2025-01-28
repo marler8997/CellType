@@ -141,26 +141,32 @@ fn parseClip(
             //
         } else if (std.mem.eql(u8, property, "left")) {
             if (clip.left != null) return out_err.set(.{ .duplicate_property = property_token });
-            const eq = try nextToken(s, out_err, property_token.end);
-            if (eq.kind != .eq) return out_err.set(.{ .unexpected_token = eq });
-            clip.left, offset = try parseBoundary(s, out_err, eq.end, .top_level, .x);
+            const eq_end = try expectToken(s, out_err, property_token.end, .eq);
+            clip.left, offset = try parseBoundary(s, out_err, eq_end, .top_level, .x);
         } else if (std.mem.eql(u8, property, "right")) {
             if (clip.right != null) return out_err.set(.{ .duplicate_property = property_token });
-            const eq = try nextToken(s, out_err, property_token.end);
-            if (eq.kind != .eq) return out_err.set(.{ .unexpected_token = eq });
-            clip.right, offset = try parseBoundary(s, out_err, eq.end, .top_level, .x);
+            const eq_end = try expectToken(s, out_err, property_token.end, .eq);
+            clip.right, offset = try parseBoundary(s, out_err, eq_end, .top_level, .x);
         } else if (std.mem.eql(u8, property, "top")) {
             if (clip.top != null) return out_err.set(.{ .duplicate_property = property_token });
-            const eq = try nextToken(s, out_err, property_token.end);
-            if (eq.kind != .eq) return out_err.set(.{ .unexpected_token = eq });
-            clip.top, offset = try parseBoundary(s, out_err, eq.end, .top_level, .y);
+            const eq_end = try expectToken(s, out_err, property_token.end, .eq);
+            clip.top, offset = try parseBoundary(s, out_err, eq_end, .top_level, .y);
         } else if (std.mem.eql(u8, property, "bottom")) {
             if (clip.bottom != null) return out_err.set(.{ .duplicate_property = property_token });
-            const eq = try nextToken(s, out_err, property_token.end);
-            if (eq.kind != .eq) return out_err.set(.{ .unexpected_token = eq });
-            clip.bottom, offset = try parseBoundary(s, out_err, eq.end, .top_level, .y);
+            const eq_end = try expectToken(s, out_err, property_token.end, .eq);
+            clip.bottom, offset = try parseBoundary(s, out_err, eq_end, .top_level, .y);
         } else if (std.mem.eql(u8, property, "count")) {
-            @panic("todo");
+            if (clip.count != 0) return out_err.set(.{ .duplicate_property = property_token });
+            const eq_end = try expectToken(s, out_err, property_token.end, .eq);
+            const num_token = try nextToken(s, out_err, eq_end);
+            if (num_token.kind != .num) return out_err.set(.{ .unexpected_token = num_token });
+            const num_token_str = s[num_token.start..num_token.end];
+            const num_u8 = std.fmt.parseInt(u8, num_token_str, 10) catch return out_err.set(
+                .{ .bad_number = num_token },
+            );
+            if (num_u8 == 0) return out_err.set(.{ .bad_number = num_token });
+            clip.count = num_u8;
+            offset = num_token.end;
         } else return out_err.set(.{ .unexpected_token = property_token });
     }
 }
@@ -349,11 +355,12 @@ test {
     var err: Error = undefined;
     try std.testing.expectEqual(
         design.Op{ .op = .{ .clip = .{
+            .count = 10,
             .left = .{ .value = .{ .base = .center, .adjust = 1 } },
             .right = .{ .value = .{ .base = .std_right, .adjust = -3 } },
             .top = .{ .value = .{ .base = .base } },
         } } },
-        (try parseOp("clip left=center+1 right=std_right-3 top=base;", &err, 0)).?[0],
+        (try parseOp("clip count=10 left=center+1 right=std_right-3 top=base;", &err, 0)).?[0],
     );
     try std.testing.expectEqual(
         design.Op{ .op = .{ .stroke_vert = .{

@@ -84,6 +84,11 @@ pub fn fromDesignBaseY(h: i32, stroke_width: i32, y: design.BoundaryBaseY) Pixel
             fromDesignBaseY(h, stroke_width, .base),
             0.5,
         ),
+        .number_bottom_quarter => {
+            const top = fromDesignBaseY(h, stroke_width, .number_top);
+            const baseline = fromDesignBaseY(h, stroke_width, .base);
+            return top.between(baseline, 0.75);
+        },
         .uppercase_top => 0.22,
         .uppercase_top_quarter => {
             const top = fromDesignBaseY(h, stroke_width, .uppercase_top);
