@@ -8,6 +8,8 @@ pub const BoundaryBaseX = enum {
     uppercase_right,
 };
 pub const BoundaryBaseY = enum {
+    number_top,
+    number_top_quarter,
     /// center of uppercase top
     uppercase_top,
     uppercase_top_quarter,

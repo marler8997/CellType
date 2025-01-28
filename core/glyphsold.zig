@@ -1,6 +1,6 @@
 const Op = @import("design.zig").Op;
 
-pub const @"0" = O ++ [_]Op{
+pub const @"0" = zero_o_shared(.number_top) ++ [_]Op{
     .{ .op = .{ .clip = .{
         .count = 1,
         .left = .{ .value = .{ .base = .uppercase_left, .adjust = 1 } },
@@ -10,17 +10,17 @@ pub const @"0" = O ++ [_]Op{
     .{ .op = .{ .stroke_diag = .{
         .a = .{
             .x = .{ .value = .{ .base = .uppercase_left } },
-            .y = .{ .value = .{ .base = .uppercase_top }, .between = .{ .to = .{ .base = .base }, .ratio = 0.70 } },
+            .y = .{ .value = .{ .base = .number_top }, .between = .{ .to = .{ .base = .base }, .ratio = 0.70 } },
         },
         .b = .{
             .x = .{ .value = .{ .base = .uppercase_right } },
-            .y = .{ .value = .{ .base = .uppercase_top }, .between = .{ .to = .{ .base = .base }, .ratio = 0.30 } },
+            .y = .{ .value = .{ .base = .number_top }, .between = .{ .to = .{ .base = .base }, .ratio = 0.30 } },
         },
     } } },
 };
 pub const @"1" = [_]Op{
     .{ .op = .{ .clip = .{
-        .top = .{ .value = .{ .base = .uppercase_top, .adjust = -1 } },
+        .top = .{ .value = .{ .base = .number_top, .adjust = -1 } },
         .bottom = .{ .value = .{ .base = .base, .adjust = 1 } },
     } } },
     // slanty's line cap looks wrong, could fix if we have the ability to clip a diagonal
@@ -31,7 +31,7 @@ pub const @"1" = [_]Op{
     } } },
     .{ .op = .{ .stroke_diag = .{
         .a = .{ .x = .{ .value = .{ .base = .uppercase_left } }, .y = .{ .value = .{ .base = ._1_slanty_bottom } } },
-        .b = .{ .x = .{ .value = .{ .base = .center, .adjust = -1 } }, .y = .{ .value = .{ .base = .uppercase_top } } },
+        .b = .{ .x = .{ .value = .{ .base = .center, .adjust = -1 } }, .y = .{ .value = .{ .base = .number_top } } },
     } } },
     .{ .op = .{ .stroke_vert = .{ .x = .{ .value = .{ .base = .center } } } } },
     .{ .op = .{ .clip = .{
@@ -48,42 +48,42 @@ pub const @"2" = [_]Op{
     .{ .op = .{ .clip = .{
         .left = .{ .value = .{ .base = .uppercase_left, .adjust = -1 } },
         .right = .{ .value = .{ .base = .uppercase_right, .adjust = 1 } },
-        .top = .{ .value = .{ .base = .uppercase_top, .adjust = -1 } },
+        .top = .{ .value = .{ .base = .number_top, .adjust = -1 } },
         .bottom = .{ .value = .{ .base = .base, .adjust = 1 } },
     } } },
     .{ .op = .{ .clip = .{
         .count = 1,
-        .bottom = .{ .value = .{ .base = .uppercase_top_quarter } },
+        .bottom = .{ .value = .{ .base = .number_top_quarter } },
     } } },
     // top left
     .{ .op = .{
         .stroke_curve = .{
-            .start = .{ .x = .{ .value = .{ .base = .uppercase_left } }, .y = .{ .value = .{ .base = .uppercase_top_quarter } } },
-            .control = .{ .x = .{ .value = .{ .base = .uppercase_left } }, .y = .{ .value = .{ .base = .uppercase_top } } },
-            .end = .{ .x = .{ .value = .{ .base = .center } }, .y = .{ .value = .{ .base = .uppercase_top } } },
+            .start = .{ .x = .{ .value = .{ .base = .uppercase_left } }, .y = .{ .value = .{ .base = .number_top_quarter } } },
+            .control = .{ .x = .{ .value = .{ .base = .uppercase_left } }, .y = .{ .value = .{ .base = .number_top } } },
+            .end = .{ .x = .{ .value = .{ .base = .center } }, .y = .{ .value = .{ .base = .number_top } } },
         },
     } },
     // top right
     .{ .op = .{
         .stroke_curve = .{
-            .start = .{ .x = .{ .value = .{ .base = .center } }, .y = .{ .value = .{ .base = .uppercase_top } } },
-            .control = .{ .x = .{ .value = .{ .base = .uppercase_right } }, .y = .{ .value = .{ .base = .uppercase_top } } },
-            .end = .{ .x = .{ .value = .{ .base = .uppercase_right } }, .y = .{ .value = .{ .base = .uppercase_top_quarter } } },
+            .start = .{ .x = .{ .value = .{ .base = .center } }, .y = .{ .value = .{ .base = .number_top } } },
+            .control = .{ .x = .{ .value = .{ .base = .uppercase_right } }, .y = .{ .value = .{ .base = .number_top } } },
+            .end = .{ .x = .{ .value = .{ .base = .uppercase_right } }, .y = .{ .value = .{ .base = .number_top_quarter } } },
         },
     } },
     // middle right
     .{ .op = .{
         .stroke_curve = .{
-            .start = .{ .x = .{ .value = .{ .base = .uppercase_right } }, .y = .{ .value = .{ .base = .uppercase_top_quarter } } },
-            .control = .{ .x = .{ .value = .{ .base = .uppercase_right } }, .y = .{ .value = .{ .base = .uppercase_top }, .between = .{ .to = .{ .base = .base }, .ratio = @"2_ratio0" } } },
-            .end = .{ .x = .{ .value = .{ .base = .center } }, .y = .{ .value = .{ .base = .uppercase_top }, .between = .{ .to = .{ .base = .base }, .ratio = @"2_ratio1" } } },
+            .start = .{ .x = .{ .value = .{ .base = .uppercase_right } }, .y = .{ .value = .{ .base = .number_top_quarter } } },
+            .control = .{ .x = .{ .value = .{ .base = .uppercase_right } }, .y = .{ .value = .{ .base = .number_top }, .between = .{ .to = .{ .base = .base }, .ratio = @"2_ratio0" } } },
+            .end = .{ .x = .{ .value = .{ .base = .center } }, .y = .{ .value = .{ .base = .number_top }, .between = .{ .to = .{ .base = .base }, .ratio = @"2_ratio1" } } },
         },
     } },
     // middle left
     .{ .op = .{
         .stroke_curve = .{
-            .start = .{ .x = .{ .value = .{ .base = .center } }, .y = .{ .value = .{ .base = .uppercase_top }, .between = .{ .to = .{ .base = .base }, .ratio = @"2_ratio1" } } },
-            .control = .{ .x = .{ .value = .{ .base = .uppercase_left } }, .y = .{ .value = .{ .base = .uppercase_top }, .between = .{ .to = .{ .base = .base }, .ratio = @"2_ratio2" } } },
+            .start = .{ .x = .{ .value = .{ .base = .center } }, .y = .{ .value = .{ .base = .number_top }, .between = .{ .to = .{ .base = .base }, .ratio = @"2_ratio1" } } },
+            .control = .{ .x = .{ .value = .{ .base = .uppercase_left } }, .y = .{ .value = .{ .base = .number_top }, .between = .{ .to = .{ .base = .base }, .ratio = @"2_ratio2" } } },
             .end = .{ .x = .{ .value = .{ .base = .uppercase_left } }, .y = .{ .value = .{ .base = .base, .adjust = -1 } } },
         },
     } },
@@ -93,22 +93,22 @@ pub const @"2" = [_]Op{
 pub const @"3" = [_]Op{
     .{ .op = .{ .clip = .{
         .count = 1,
-        .bottom = .{ .value = .{ .base = .uppercase_top_quarter } },
+        .bottom = .{ .value = .{ .base = .number_top_quarter } },
     } } },
     // top left
     .{ .op = .{
         .stroke_curve = .{
-            .start = .{ .x = .{ .value = .{ .base = .uppercase_left } }, .y = .{ .value = .{ .base = .uppercase_top_quarter } } },
-            .control = .{ .x = .{ .value = .{ .base = .uppercase_left } }, .y = .{ .value = .{ .base = .uppercase_top } } },
-            .end = .{ .x = .{ .value = .{ .base = .center } }, .y = .{ .value = .{ .base = .uppercase_top } } },
+            .start = .{ .x = .{ .value = .{ .base = .uppercase_left } }, .y = .{ .value = .{ .base = .number_top_quarter } } },
+            .control = .{ .x = .{ .value = .{ .base = .uppercase_left } }, .y = .{ .value = .{ .base = .number_top } } },
+            .end = .{ .x = .{ .value = .{ .base = .center } }, .y = .{ .value = .{ .base = .number_top } } },
         },
     } },
     // top right
     .{ .op = .{
         .stroke_curve = .{
-            .start = .{ .x = .{ .value = .{ .base = .center } }, .y = .{ .value = .{ .base = .uppercase_top } } },
-            .control = .{ .x = .{ .value = .{ .base = .uppercase_right } }, .y = .{ .value = .{ .base = .uppercase_top } } },
-            .end = .{ .x = .{ .value = .{ .base = .uppercase_right } }, .y = .{ .value = .{ .base = .uppercase_top_quarter } } },
+            .start = .{ .x = .{ .value = .{ .base = .center } }, .y = .{ .value = .{ .base = .number_top } } },
+            .control = .{ .x = .{ .value = .{ .base = .uppercase_right } }, .y = .{ .value = .{ .base = .number_top } } },
+            .end = .{ .x = .{ .value = .{ .base = .uppercase_right } }, .y = .{ .value = .{ .base = .number_top_quarter } } },
         },
     } },
     .{ .op = .{ .clip = .{
@@ -118,7 +118,7 @@ pub const @"3" = [_]Op{
     // upper middle right
     .{ .op = .{
         .stroke_curve = .{
-            .start = .{ .x = .{ .value = .{ .base = .uppercase_right } }, .y = .{ .value = .{ .base = .uppercase_top_quarter } } },
+            .start = .{ .x = .{ .value = .{ .base = .uppercase_right } }, .y = .{ .value = .{ .base = .number_top_quarter } } },
             .control = .{ .x = .{ .value = .{ .base = .uppercase_right } }, .y = .{ .value = .{ .base = .uppercase_center } } },
             .end = .{ .x = .{ .value = .{ .base = .center, .adjust = -1 } }, .y = .{ .value = .{ .base = .uppercase_center } } },
         },
@@ -153,33 +153,37 @@ pub const @"3" = [_]Op{
     } },
 };
 
-pub const O = [_]Op{
-    .{ .op = .{
-        .stroke_curve = .{
-            .start = .{ .x = .{ .value = .{ .base = .uppercase_left } }, .y = .{ .value = .{ .base = .uppercase_center } } },
-            .control = .{ .x = .{ .value = .{ .base = .uppercase_left } }, .y = .{ .value = .{ .base = .uppercase_top } } },
-            .end = .{ .x = .{ .value = .{ .base = .center } }, .y = .{ .value = .{ .base = .uppercase_top } } },
-        },
-    } },
-    .{ .op = .{
-        .stroke_curve = .{
-            .start = .{ .x = .{ .value = .{ .base = .uppercase_right } }, .y = .{ .value = .{ .base = .uppercase_center } } },
-            .control = .{ .x = .{ .value = .{ .base = .uppercase_right } }, .y = .{ .value = .{ .base = .uppercase_top } } },
-            .end = .{ .x = .{ .value = .{ .base = .center } }, .y = .{ .value = .{ .base = .uppercase_top } } },
-        },
-    } },
-    .{ .op = .{
-        .stroke_curve = .{
-            .start = .{ .x = .{ .value = .{ .base = .uppercase_left } }, .y = .{ .value = .{ .base = .uppercase_center } } },
-            .control = .{ .x = .{ .value = .{ .base = .uppercase_left } }, .y = .{ .value = .{ .base = .base } } },
-            .end = .{ .x = .{ .value = .{ .base = .center } }, .y = .{ .value = .{ .base = .base } } },
-        },
-    } },
-    .{ .op = .{
-        .stroke_curve = .{
-            .start = .{ .x = .{ .value = .{ .base = .uppercase_right } }, .y = .{ .value = .{ .base = .uppercase_center } } },
-            .control = .{ .x = .{ .value = .{ .base = .uppercase_right } }, .y = .{ .value = .{ .base = .base } } },
-            .end = .{ .x = .{ .value = .{ .base = .center } }, .y = .{ .value = .{ .base = .base } } },
-        },
-    } },
-};
+pub const O = zero_o_shared(.uppercase_top);
+
+fn zero_o_shared(top: @import("design.zig").BoundaryBaseY) [4]Op {
+    return [_]Op{
+        .{ .op = .{
+            .stroke_curve = .{
+                .start = .{ .x = .{ .value = .{ .base = .uppercase_left } }, .y = .{ .value = .{ .base = .uppercase_center } } },
+                .control = .{ .x = .{ .value = .{ .base = .uppercase_left } }, .y = .{ .value = .{ .base = top } } },
+                .end = .{ .x = .{ .value = .{ .base = .center } }, .y = .{ .value = .{ .base = top } } },
+            },
+        } },
+        .{ .op = .{
+            .stroke_curve = .{
+                .start = .{ .x = .{ .value = .{ .base = .uppercase_right } }, .y = .{ .value = .{ .base = .uppercase_center } } },
+                .control = .{ .x = .{ .value = .{ .base = .uppercase_right } }, .y = .{ .value = .{ .base = top } } },
+                .end = .{ .x = .{ .value = .{ .base = .center } }, .y = .{ .value = .{ .base = top } } },
+            },
+        } },
+        .{ .op = .{
+            .stroke_curve = .{
+                .start = .{ .x = .{ .value = .{ .base = .uppercase_left } }, .y = .{ .value = .{ .base = .uppercase_center } } },
+                .control = .{ .x = .{ .value = .{ .base = .uppercase_left } }, .y = .{ .value = .{ .base = .base } } },
+                .end = .{ .x = .{ .value = .{ .base = .center } }, .y = .{ .value = .{ .base = .base } } },
+            },
+        } },
+        .{ .op = .{
+            .stroke_curve = .{
+                .start = .{ .x = .{ .value = .{ .base = .uppercase_right } }, .y = .{ .value = .{ .base = .uppercase_center } } },
+                .control = .{ .x = .{ .value = .{ .base = .uppercase_right } }, .y = .{ .value = .{ .base = .base } } },
+                .end = .{ .x = .{ .value = .{ .base = .center } }, .y = .{ .value = .{ .base = .base } } },
+            },
+        } },
+    };
+}

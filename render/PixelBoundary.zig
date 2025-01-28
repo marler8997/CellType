@@ -70,7 +70,13 @@ pub fn fromDesignBaseY(h: i32, stroke_width: i32, y: design.BoundaryBaseY) Pixel
     // if y is large enough, we just always use the same floating point
     // multiplier for the position
     const large_enough_ratio: f32 = switch (y) {
-        .uppercase_top => 0.2,
+        .number_top => 0.18,
+        .number_top_quarter => {
+            const top = fromDesignBaseY(h, stroke_width, .number_top);
+            const baseline = fromDesignBaseY(h, stroke_width, .base);
+            return top.between(baseline, 0.25);
+        },
+        .uppercase_top => 0.22,
         .uppercase_top_quarter => {
             const top = fromDesignBaseY(h, stroke_width, .uppercase_top);
             const baseline = fromDesignBaseY(h, stroke_width, .base);
