@@ -304,17 +304,17 @@ fn getDefault(op: celltype.design.Op2Tag) celltype.design.Op {
         .stroke_vert => .{ .op = .{ .stroke_vert = .{ .x = .{ .value = .{ .base = .center } } } } },
         .stroke_horz => .{ .op = .{ .stroke_horz = .{ .y = .{ .value = .{ .base = .base } } } } },
         .stroke_diag => .{ .op = .{ .stroke_diag = .{
-            .a = .{ .x = .{ .value = .{ .base = .uppercase_left } }, .y = .{ .value = .{ .base = .base } } },
-            .b = .{ .x = .{ .value = .{ .base = .uppercase_right } }, .y = .{ .value = .{ .base = .uppercase_top } } },
+            .a = .{ .x = .{ .value = .{ .base = .std_left } }, .y = .{ .value = .{ .base = .base } } },
+            .b = .{ .x = .{ .value = .{ .base = .std_right } }, .y = .{ .value = .{ .base = .uppercase_top } } },
         } } },
         .stroke_dot => .{ .op = .{ .stroke_dot = .{
             .x = .{ .value = .{ .base = .center, .adjust = 1 } },
             .y = .{ .value = .{ .base = .uppercase_top } },
         } } },
         .stroke_curve => .{ .op = .{ .stroke_curve = .{
-            .start = .{ .x = .{ .value = .{ .base = .uppercase_left } }, .y = .{ .value = .{ .base = .lowercase_top } } },
+            .start = .{ .x = .{ .value = .{ .base = .std_left } }, .y = .{ .value = .{ .base = .lowercase_top } } },
             .control = .{ .x = .{ .value = .{ .base = .center } }, .y = .{ .value = .{ .base = .base } } },
-            .end = .{ .x = .{ .value = .{ .base = .uppercase_right } }, .y = .{ .value = .{ .base = .lowercase_top } } },
+            .end = .{ .x = .{ .value = .{ .base = .std_right } }, .y = .{ .value = .{ .base = .lowercase_top } } },
         } } },
     };
 }

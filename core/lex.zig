@@ -349,16 +349,16 @@ test {
     try std.testing.expectEqual(
         design.Op{ .op = .{ .clip = .{
             .left = .{ .value = .{ .base = .center, .adjust = 1 } },
-            .right = .{ .value = .{ .base = .uppercase_right, .adjust = -3 } },
+            .right = .{ .value = .{ .base = .std_right, .adjust = -3 } },
             .top = .{ .value = .{ .base = .base } },
         } } },
-        (try parseOp("clip left=center+1 right=uppercase_right-3 top=base;", &err, 0)).?[0],
+        (try parseOp("clip left=center+1 right=std_right-3 top=base;", &err, 0)).?[0],
     );
     try std.testing.expectEqual(
         design.Op{ .op = .{ .stroke_vert = .{
-            .x = .{ .value = .{ .base = .uppercase_left, .adjust = -100 } },
+            .x = .{ .value = .{ .base = .std_left, .adjust = -100 } },
         } } },
-        (try parseOp("stroke vert uppercase_left-100;", &err, 0)).?[0],
+        (try parseOp("stroke vert std_left-100;", &err, 0)).?[0],
     );
     try std.testing.expectEqual(
         design.Op{ .op = .{ .stroke_horz = .{
@@ -368,23 +368,23 @@ test {
     );
     try std.testing.expectEqual(
         design.Op{ .op = .{ .stroke_diag = .{
-            .a = .{ .x = .{ .value = .{ .base = .uppercase_left, .adjust = -1 } }, .y = .{ .value = .{ .base = .base } } },
-            .b = .{ .x = .{ .value = .{ .base = .uppercase_right, .adjust = 1 } }, .y = .{ .value = .{ .base = .uppercase_top } } },
+            .a = .{ .x = .{ .value = .{ .base = .std_left, .adjust = -1 } }, .y = .{ .value = .{ .base = .base } } },
+            .b = .{ .x = .{ .value = .{ .base = .std_right, .adjust = 1 } }, .y = .{ .value = .{ .base = .uppercase_top } } },
         } } },
-        (try parseOp("stroke diag uppercase_left-1 base uppercase_right+1 uppercase_top;", &err, 0)).?[0],
+        (try parseOp("stroke diag std_left-1 base std_right+1 uppercase_top;", &err, 0)).?[0],
     );
 
     try std.testing.expectEqual(
         design.Op{ .op = .{ .stroke_vert = .{ .x = .{
             .value = .{ .base = .center, .adjust = -3 },
-            .between = .{ .to = .{ .base = .uppercase_right, .adjust = 5 }, .ratio = 0.5 },
+            .between = .{ .to = .{ .base = .std_right, .adjust = 5 }, .ratio = 0.5 },
         } } } },
-        (try parseOp("stroke vert between(center-3 uppercase_right+5 0.5);", &err, 0)).?[0],
+        (try parseOp("stroke vert between(center-3 std_right+5 0.5);", &err, 0)).?[0],
     );
     try std.testing.expectEqual(
         design.Op{ .op = .{ .stroke_curve = .{
             .start = .{
-                .x = .{ .value = .{ .base = .uppercase_left } },
+                .x = .{ .value = .{ .base = .std_left } },
                 .y = .{ .value = .{ .base = .uppercase_center } },
             },
             .control = .{
@@ -392,15 +392,15 @@ test {
                 .y = .{ .value = .{ .base = .base } },
             },
             .end = .{
-                .x = .{ .value = .{ .base = .uppercase_right } },
+                .x = .{ .value = .{ .base = .std_right } },
                 .y = .{ .value = .{ .base = .uppercase_top } },
             },
         } } },
         (try parseOp(
             \\stroke curve
-            \\    uppercase_left uppercase_center
+            \\    std_left uppercase_center
             \\    center base
-            \\    uppercase_right uppercase_top
+            \\    std_right uppercase_top
             \\;
         , &err, 0)).?[0],
     );

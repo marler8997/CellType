@@ -1,11 +1,11 @@
 const std = @import("std");
 
 pub const BoundaryBaseX = enum {
-    /// center of uppercase left stroke
-    uppercase_left,
+    /// center of standard left stroke
+    std_left,
     center,
-    /// center of uppercase right stroke
-    uppercase_right,
+    /// center of standard right stroke
+    std_right,
 };
 pub const BoundaryBaseY = enum {
     number_top,
