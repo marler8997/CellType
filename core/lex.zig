@@ -239,12 +239,15 @@ fn parseBoundary(
 
         const num_f32 = std.fmt.parseFloat(f32, num_str) catch return out_err.set(.{ .bad_number = num_token });
         const close_paren_end = try expectToken(s, out_err, num_token.end, .close_paren);
+
+        const adjust, const between_end = try parseAdjust(s, out_err, close_paren_end);
+
         return .{
             .{
                 .value = from.value,
-                .between = .{ .to = to.value, .ratio = num_f32 },
+                .between = .{ .to = to.value, .ratio = num_f32, .adjust = adjust },
             },
-            close_paren_end,
+            between_end,
         };
     }
     inline for (std.meta.fields(BoundaryBase)) |field| {
@@ -424,6 +427,13 @@ test {
             .between = .{ .to = .{ .base = .std_right, .adjust = 5 }, .ratio = 0.5 },
         } } },
         (try parseOp("stroke vert between(center-3 std_right+5 0.5);", &err, 0)).?[0],
+    );
+    try std.testing.expectEqual(
+        design.Op{ .stroke_vert = .{ .x = .{
+            .value = .{ .base = .center, .adjust = -3 },
+            .between = .{ .to = .{ .base = .std_right, .adjust = 5 }, .ratio = 0.5, .adjust = 20 },
+        } } },
+        (try parseOp("stroke vert between(center-3 std_right+5 0.5)+20;", &err, 0)).?[0],
     );
     try std.testing.expectEqual(
         design.Op{ .stroke_curve = .{

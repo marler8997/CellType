@@ -67,16 +67,17 @@ pub const AdjustableBoundaryY = struct {
 pub const BetweenX = struct {
     to: AdjustableBoundaryX,
     ratio: f32,
+    adjust: i8 = 0,
 };
 pub const BetweenY = struct {
     to: AdjustableBoundaryY,
     ratio: f32,
+    adjust: i8 = 0,
 };
 
 pub const BoundaryX = struct {
     value: AdjustableBoundaryX,
     between: ?BetweenX = null,
-    //adjust: i8 = 0,
     pub fn format(
         self: BoundaryX,
         comptime fmt: []const u8,
@@ -97,7 +98,6 @@ pub const BoundaryX = struct {
 pub const BoundaryY = struct {
     value: AdjustableBoundaryY,
     between: ?BetweenY = null,
-    //adjust: i8 = 0,
     pub fn format(
         self: BoundaryY,
         comptime fmt: []const u8,

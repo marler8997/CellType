@@ -43,12 +43,12 @@ pub fn fromRounded(rounded: i32, bias: Bias) PixelBoundary {
 pub fn fromDesignX(w: i32, stroke_width: i32, x: design.BoundaryX) PixelBoundary {
     const boundary = fromDesignBaseX(w, stroke_width, x.value.base).adjust(stroke_width, x.value.adjust);
     const bet = x.between orelse return boundary;
-    return boundary.betweenX(w, stroke_width, bet);
+    return boundary.betweenX(w, stroke_width, bet).adjust(stroke_width, bet.adjust);
 }
 pub fn fromDesignY(h: i32, stroke_width: i32, y: design.BoundaryY) PixelBoundary {
     const boundary = fromDesignBaseY(h, stroke_width, y.value.base).adjust(stroke_width, y.value.adjust);
     const bet = y.between orelse return boundary;
-    return boundary.betweenY(h, stroke_width, bet);
+    return boundary.betweenY(h, stroke_width, bet).adjust(stroke_width, bet.adjust);
 }
 
 pub fn fromDesignBaseX(w: i32, stroke_width: i32, x: design.BoundaryBaseX) PixelBoundary {
