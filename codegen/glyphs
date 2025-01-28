@@ -229,6 +229,29 @@ stroke diag
     between(std_right std_left 0.07) between(number_top base 0.4)
     between(std_right std_left 0.6) base
 ;
+--- a
+stroke curve
+    std_left lowercase_center
+    std_left lowercase_top
+    center lowercase_top
+;
+stroke curve
+    std_left lowercase_center
+    std_left base
+    center base
+;
+stroke curve
+    between(std_right std_left 0.1) lowercase_center
+    between(std_right std_left 0.1) between(base lowercase_top 0.1)
+    center base
+;
+stroke curve
+    between(std_right std_left 0.1) lowercase_center
+    between(std_right std_left 0.1) between(lowercase_top base 0.1)
+    center lowercase_top
+;
+clip top=lowercase_top-1 bottom=base+1;
+stroke vert std_right;
 --- i
 clip bottom=base+1;
 stroke dot center lowercase_dot;
