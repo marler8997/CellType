@@ -23,55 +23,6 @@ pub const @"1" = [_]Op{
     .{ .condition = .serif, .op = .{ .stroke_horz = .{ .y = .{ .value = .{ .base = .base } } } } },
 };
 
-const @"2_ratio0" = 0.4;
-const @"2_ratio1" = 0.6;
-const @"2_ratio2" = 0.8;
-pub const @"2" = [_]Op{
-    .{ .op = .{ .clip = .{
-        .left = .{ .value = .{ .base = .std_left, .adjust = -1 } },
-        .right = .{ .value = .{ .base = .std_right, .adjust = 1 } },
-        .top = .{ .value = .{ .base = .number_top, .adjust = -1 } },
-        .bottom = .{ .value = .{ .base = .base, .adjust = 1 } },
-    } } },
-    .{ .op = .{ .clip = .{
-        .count = 1,
-        .bottom = .{ .value = .{ .base = .number_top_quarter } },
-    } } },
-    // top left
-    .{ .op = .{
-        .stroke_curve = .{
-            .start = .{ .x = .{ .value = .{ .base = .std_left } }, .y = .{ .value = .{ .base = .number_top_quarter } } },
-            .control = .{ .x = .{ .value = .{ .base = .std_left } }, .y = .{ .value = .{ .base = .number_top } } },
-            .end = .{ .x = .{ .value = .{ .base = .center } }, .y = .{ .value = .{ .base = .number_top } } },
-        },
-    } },
-    // top right
-    .{ .op = .{
-        .stroke_curve = .{
-            .start = .{ .x = .{ .value = .{ .base = .center } }, .y = .{ .value = .{ .base = .number_top } } },
-            .control = .{ .x = .{ .value = .{ .base = .std_right } }, .y = .{ .value = .{ .base = .number_top } } },
-            .end = .{ .x = .{ .value = .{ .base = .std_right } }, .y = .{ .value = .{ .base = .number_top_quarter } } },
-        },
-    } },
-    // middle right
-    .{ .op = .{
-        .stroke_curve = .{
-            .start = .{ .x = .{ .value = .{ .base = .std_right } }, .y = .{ .value = .{ .base = .number_top_quarter } } },
-            .control = .{ .x = .{ .value = .{ .base = .std_right } }, .y = .{ .value = .{ .base = .number_top }, .between = .{ .to = .{ .base = .base }, .ratio = @"2_ratio0" } } },
-            .end = .{ .x = .{ .value = .{ .base = .center } }, .y = .{ .value = .{ .base = .number_top }, .between = .{ .to = .{ .base = .base }, .ratio = @"2_ratio1" } } },
-        },
-    } },
-    // middle left
-    .{ .op = .{
-        .stroke_curve = .{
-            .start = .{ .x = .{ .value = .{ .base = .center } }, .y = .{ .value = .{ .base = .number_top }, .between = .{ .to = .{ .base = .base }, .ratio = @"2_ratio1" } } },
-            .control = .{ .x = .{ .value = .{ .base = .std_left } }, .y = .{ .value = .{ .base = .number_top }, .between = .{ .to = .{ .base = .base }, .ratio = @"2_ratio2" } } },
-            .end = .{ .x = .{ .value = .{ .base = .std_left } }, .y = .{ .value = .{ .base = .base, .adjust = -1 } } },
-        },
-    } },
-    .{ .op = .{ .stroke_horz = .{ .y = .{ .value = .{ .base = .base } } } } },
-};
-
 pub const @"3" = [_]Op{
     .{ .op = .{ .clip = .{
         .count = 1,

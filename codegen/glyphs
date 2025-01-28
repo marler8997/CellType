@@ -25,6 +25,29 @@ stroke diag
     std_left between(number_top base 0.70)
     std_right between(number_top base 0.30)
 ;
+--- 2
+clip left=std_left-1 right=std_right+1;
+stroke horz base;
+stroke curve
+    std_left number_top_quarter
+    std_left number_top
+    center number_top
+;
+stroke curve
+    center number_top
+    std_right number_top
+    std_right number_top_quarter
+;
+stroke curve
+    std_right number_top_quarter
+    std_right between(number_top base 0.4)
+    center between(number_top base 0.6)
+;
+stroke curve
+    center between(number_top base 0.6)
+    std_left between(number_top base 0.8)
+    std_left base-1
+;
 --- i
 clip bottom=base+1;
 stroke dot center lowercase_dot;
