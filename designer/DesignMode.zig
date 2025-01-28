@@ -285,37 +285,38 @@ fn updateOp(self: *DesignMode, direction: enum { left, right }) void {
     std.debug.assert(self.ops.items.len > 0);
     std.debug.assert(self.op_cursor < self.ops.items.len);
 
-    const current_op_tag: celltype.design.Op2Tag = self.ops.items[self.op_cursor].op;
+    const current_op_tag: celltype.design.OpTag = self.ops.items[self.op_cursor];
     const add = switch (direction) {
-        .left => celltype.design.op2_count - 1,
+        .left => celltype.design.op_count - 1,
         .right => 1,
     };
-    const new_op_tag: celltype.design.Op2Tag = @enumFromInt((@intFromEnum(current_op_tag) + add) % celltype.design.op2_count);
+    const new_op_tag: celltype.design.OpTag = @enumFromInt((@intFromEnum(current_op_tag) + add) % celltype.design.op_count);
     self.ops.items[self.op_cursor] = getDefault(new_op_tag);
     root.invalidate();
 }
 
-fn getDefault(op: celltype.design.Op2Tag) celltype.design.Op {
+fn getDefault(op: celltype.design.OpTag) celltype.design.Op {
     return switch (op) {
-        .todo => .{ .op = .todo },
-        .clip => .{ .op = .{ .clip = .{ .left = .{ .value = .{
+        .todo => .todo,
+        .branch => .{ .branch = .{ .count = 1, .condition = .serif } },
+        .clip => .{ .clip = .{ .left = .{ .value = .{
             .base = .center,
-        } }, .top = .{ .value = .{ .base = .base } } } } },
-        .stroke_vert => .{ .op = .{ .stroke_vert = .{ .x = .{ .value = .{ .base = .center } } } } },
-        .stroke_horz => .{ .op = .{ .stroke_horz = .{ .y = .{ .value = .{ .base = .base } } } } },
-        .stroke_diag => .{ .op = .{ .stroke_diag = .{
+        } }, .top = .{ .value = .{ .base = .base } } } },
+        .stroke_vert => .{ .stroke_vert = .{ .x = .{ .value = .{ .base = .center } } } },
+        .stroke_horz => .{ .stroke_horz = .{ .y = .{ .value = .{ .base = .base } } } },
+        .stroke_diag => .{ .stroke_diag = .{
             .a = .{ .x = .{ .value = .{ .base = .std_left } }, .y = .{ .value = .{ .base = .base } } },
             .b = .{ .x = .{ .value = .{ .base = .std_right } }, .y = .{ .value = .{ .base = .uppercase_top } } },
-        } } },
-        .stroke_dot => .{ .op = .{ .stroke_dot = .{
+        } },
+        .stroke_dot => .{ .stroke_dot = .{
             .x = .{ .value = .{ .base = .center, .adjust = 1 } },
             .y = .{ .value = .{ .base = .uppercase_top } },
-        } } },
-        .stroke_curve => .{ .op = .{ .stroke_curve = .{
+        } },
+        .stroke_curve => .{ .stroke_curve = .{
             .start = .{ .x = .{ .value = .{ .base = .std_left } }, .y = .{ .value = .{ .base = .lowercase_top } } },
             .control = .{ .x = .{ .value = .{ .base = .center } }, .y = .{ .value = .{ .base = .base } } },
             .end = .{ .x = .{ .value = .{ .base = .std_right } }, .y = .{ .value = .{ .base = .lowercase_top } } },
-        } } },
+        } },
     };
 }
 

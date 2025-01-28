@@ -246,11 +246,25 @@ pub const StrokeCurve = struct {
 };
 
 pub const Condition = enum {
-    yes,
     serif,
 };
+pub const Branch = struct {
+    count: u8,
+    condition: Condition,
+    pub fn format(
+        self: Branch,
+        comptime fmt: []const u8,
+        options: std.fmt.FormatOptions,
+        writer: anytype,
+    ) !void {
+        _ = fmt;
+        _ = options;
+        try writer.print("{} {s}", .{ self.count, @tagName(self.condition) });
+    }
+};
 
-pub const Op2Tag = enum {
+pub const OpTag = enum {
+    branch,
     todo,
     clip,
     stroke_vert,
@@ -259,9 +273,10 @@ pub const Op2Tag = enum {
     stroke_dot,
     stroke_curve,
 };
-pub const op2_count = std.meta.fields(Op2Tag).len;
+pub const op_count = std.meta.fields(OpTag).len;
 
-pub const Op2 = union(Op2Tag) {
+pub const Op = union(OpTag) {
+    branch: Branch,
     todo: void,
     clip: Clip,
     stroke_vert: StrokeVert,
@@ -269,11 +284,7 @@ pub const Op2 = union(Op2Tag) {
     stroke_diag: StrokeDiag,
     stroke_dot: BoundaryPoint,
     stroke_curve: StrokeCurve,
-};
 
-pub const Op = struct {
-    condition: Condition = .yes,
-    op: Op2,
     pub fn format(
         self: Op,
         comptime fmt: []const u8,
@@ -282,11 +293,8 @@ pub const Op = struct {
     ) !void {
         _ = fmt;
         _ = options;
-        switch (self.condition) {
-            .yes => {},
-            .serif => try writer.writeAll("if(serif) "),
-        }
-        switch (self.op) {
+        switch (self) {
+            .branch => |b| try writer.print("condition {}", .{b}),
             .todo => try writer.writeAll("todo"),
             .clip => |c| try writer.print("clip {}", .{c}),
             .stroke_vert => |s| try writer.print("stroke vert {}", .{s}),

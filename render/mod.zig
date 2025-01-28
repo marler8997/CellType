@@ -129,7 +129,7 @@ fn getOps(grapheme_utf8: []const u8) error{Utf8Decode}!struct { usize, []const d
     return .{ utf8_len, &todo };
 }
 
-const todo = [_]design.Op{.{ .op = .todo }};
+const todo = [_]design.Op{.todo};
 
 const ClipBoundaries = struct {
     row_start: usize,
@@ -156,12 +156,29 @@ fn getClipBoundaries(w: i32, h: i32, ops: []const design.Op) ClipBoundaries {
 fn pixelShaderOps(config: *const Config, w: i32, h: i32, stroke_width: i32, col: i32, row: i32, ops: []const design.Op) u8 {
     var max: u8 = 0;
     var clip_count: u8 = 0;
+    var branch_count: u8 = 0;
+    var branch_condition: design.Condition = undefined;
     for (ops) |*op| {
         if (clip_count > 0) {
             clip_count -= 1;
             continue;
         }
-        max = @max(max, switch (pixelShaderOp(config, w, h, stroke_width, col, row, op)) {
+        if (branch_count > 0) {
+            branch_count -= 1;
+            switch (branch_condition) {
+                .serif => if (!config.serif) continue,
+            }
+        }
+        switch (op.*) {
+            .branch => |branch| {
+                if (branch_count != 0) @panic("multiple branch conditions?");
+                branch_count = branch.count;
+                branch_condition = branch.condition;
+                continue;
+            },
+            else => {},
+        }
+        max = @max(max, switch (pixelShaderOp(w, h, stroke_width, col, row, op)) {
             .max_candidate => |candidate| candidate,
             .clip => |count| {
                 if (count == 0) return max;
@@ -173,12 +190,9 @@ fn pixelShaderOps(config: *const Config, w: i32, h: i32, stroke_width: i32, col:
     }
     return max;
 }
-fn pixelShaderOp(config: *const Config, w: i32, h: i32, stroke_width: i32, col: i32, row: i32, op: *const design.Op) ShaderResult {
-    switch (op.condition) {
-        .yes => {},
-        .serif => if (!config.serif) return .{ .max_candidate = 0 },
-    }
-    return switch (op.op) {
+fn pixelShaderOp(w: i32, h: i32, stroke_width: i32, col: i32, row: i32, op: *const design.Op) ShaderResult {
+    return switch (op.*) {
+        .branch => unreachable,
         inline else => |*args, tag| @field(shaders, @tagName(tag))(
             w,
             h,

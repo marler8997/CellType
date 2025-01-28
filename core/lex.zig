@@ -65,7 +65,7 @@ pub fn parseOp(s: []const u8, out_err: *Error, start: usize) error{Error}!?struc
     const op_kind_token_str = s[op_kind_token.start..op_kind_token.end];
     if (std.mem.eql(u8, op_kind_token_str, "clip")) {
         const clip, const offset = try parseClip(s, out_err, op_kind_token.end);
-        return .{ .{ .op = .{ .clip = clip } }, offset };
+        return .{ .{ .clip = clip }, offset };
     }
 
     if (std.mem.eql(u8, op_kind_token_str, "stroke")) {
@@ -76,13 +76,13 @@ pub fn parseOp(s: []const u8, out_err: *Error, start: usize) error{Error}!?struc
         } else if (std.mem.eql(u8, stroke_kind_str, "vert")) {
             const x, const offset = try parseBoundary(s, out_err, stroke_kind_token.end, .top_level, .x);
             return .{
-                .{ .op = .{ .stroke_vert = .{ .x = x } } },
+                .{ .stroke_vert = .{ .x = x } },
                 try expectToken(s, out_err, offset, .semicolon),
             };
         } else if (std.mem.eql(u8, stroke_kind_str, "horz")) {
             const y, const offset = try parseBoundary(s, out_err, stroke_kind_token.end, .top_level, .y);
             return .{
-                .{ .op = .{ .stroke_horz = .{ .y = y } } },
+                .{ .stroke_horz = .{ .y = y } },
                 try expectToken(s, out_err, offset, .semicolon),
             };
         } else if (std.mem.eql(u8, stroke_kind_str, "diag")) {
@@ -91,17 +91,17 @@ pub fn parseOp(s: []const u8, out_err: *Error, start: usize) error{Error}!?struc
             const x1, offset = try parseBoundary(s, out_err, offset, .top_level, .x);
             const y1, offset = try parseBoundary(s, out_err, offset, .top_level, .y);
             return .{
-                .{ .op = .{ .stroke_diag = .{
+                .{ .stroke_diag = .{
                     .a = .{ .x = x0, .y = y0 },
                     .b = .{ .x = x1, .y = y1 },
-                } } },
+                } },
                 try expectToken(s, out_err, offset, .semicolon),
             };
         } else if (std.mem.eql(u8, stroke_kind_str, "dot")) {
             const x, var offset = try parseBoundary(s, out_err, stroke_kind_token.end, .top_level, .x);
             const y, offset = try parseBoundary(s, out_err, offset, .top_level, .y);
             return .{
-                .{ .op = .{ .stroke_dot = .{ .x = x, .y = y } } },
+                .{ .stroke_dot = .{ .x = x, .y = y } },
                 try expectToken(s, out_err, offset, .semicolon),
             };
         } else if (std.mem.eql(u8, stroke_kind_str, "curve")) {
@@ -112,15 +112,16 @@ pub fn parseOp(s: []const u8, out_err: *Error, start: usize) error{Error}!?struc
             const x2, offset = try parseBoundary(s, out_err, offset, .top_level, .x);
             const y2, offset = try parseBoundary(s, out_err, offset, .top_level, .y);
             return .{
-                .{ .op = .{ .stroke_curve = .{
+                .{ .stroke_curve = .{
                     .start = .{ .x = x0, .y = y0 },
                     .control = .{ .x = x1, .y = y1 },
                     .end = .{ .x = x2, .y = y2 },
-                } } },
+                } },
                 try expectToken(s, out_err, offset, .semicolon),
             };
         } else return out_err.set(.{ .unexpected_token = stroke_kind_token });
     }
+
     return out_err.set(.{ .unexpected_token = op_kind_token });
 }
 
@@ -354,43 +355,43 @@ fn isWhitespace(c: u8) bool {
 test {
     var err: Error = undefined;
     try std.testing.expectEqual(
-        design.Op{ .op = .{ .clip = .{
+        design.Op{ .clip = .{
             .count = 10,
             .left = .{ .value = .{ .base = .center, .adjust = 1 } },
             .right = .{ .value = .{ .base = .std_right, .adjust = -3 } },
             .top = .{ .value = .{ .base = .base } },
-        } } },
+        } },
         (try parseOp("clip count=10 left=center+1 right=std_right-3 top=base;", &err, 0)).?[0],
     );
     try std.testing.expectEqual(
-        design.Op{ .op = .{ .stroke_vert = .{
+        design.Op{ .stroke_vert = .{
             .x = .{ .value = .{ .base = .std_left, .adjust = -100 } },
-        } } },
+        } },
         (try parseOp("stroke vert std_left-100;", &err, 0)).?[0],
     );
     try std.testing.expectEqual(
-        design.Op{ .op = .{ .stroke_horz = .{
+        design.Op{ .stroke_horz = .{
             .y = .{ .value = .{ .base = .base, .adjust = 0 } },
-        } } },
+        } },
         (try parseOp("stroke horz base;", &err, 0)).?[0],
     );
     try std.testing.expectEqual(
-        design.Op{ .op = .{ .stroke_diag = .{
+        design.Op{ .stroke_diag = .{
             .a = .{ .x = .{ .value = .{ .base = .std_left, .adjust = -1 } }, .y = .{ .value = .{ .base = .base } } },
             .b = .{ .x = .{ .value = .{ .base = .std_right, .adjust = 1 } }, .y = .{ .value = .{ .base = .uppercase_top } } },
-        } } },
+        } },
         (try parseOp("stroke diag std_left-1 base std_right+1 uppercase_top;", &err, 0)).?[0],
     );
 
     try std.testing.expectEqual(
-        design.Op{ .op = .{ .stroke_vert = .{ .x = .{
+        design.Op{ .stroke_vert = .{ .x = .{
             .value = .{ .base = .center, .adjust = -3 },
             .between = .{ .to = .{ .base = .std_right, .adjust = 5 }, .ratio = 0.5 },
-        } } } },
+        } } },
         (try parseOp("stroke vert between(center-3 std_right+5 0.5);", &err, 0)).?[0],
     );
     try std.testing.expectEqual(
-        design.Op{ .op = .{ .stroke_curve = .{
+        design.Op{ .stroke_curve = .{
             .start = .{
                 .x = .{ .value = .{ .base = .std_left } },
                 .y = .{ .value = .{ .base = .uppercase_center } },
@@ -403,7 +404,7 @@ test {
                 .x = .{ .value = .{ .base = .std_right } },
                 .y = .{ .value = .{ .base = .uppercase_top } },
             },
-        } } },
+        } },
         (try parseOp(
             \\stroke curve
             \\    std_left uppercase_center
