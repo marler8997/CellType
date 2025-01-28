@@ -3,9 +3,10 @@ const design = @import("design.zig");
 
 pub const Error = union(enum) {
     invalid_char: usize,
-    overflow: u32,
+    bad_number: Token,
     unexpected_token: Token,
     duplicate_property: Token,
+    recursive_between: Token,
 
     pub fn set(self: *Error, value: Error) error{Error} {
         self.* = value;
@@ -72,22 +73,22 @@ pub fn parseOp(s: []const u8, out_err: *Error, start: usize) error{Error}!?struc
         if (false) {
             //
         } else if (std.mem.eql(u8, stroke_kind_str, "vert")) {
-            const x, const offset = try parseBoundary(s, out_err, stroke_kind_token.end, .x);
+            const x, const offset = try parseBoundary(s, out_err, stroke_kind_token.end, .top_level, .x);
             return .{
                 .{ .op = .{ .stroke_vert = .{ .x = x } } },
                 try expectToken(s, out_err, offset, .semicolon),
             };
         } else if (std.mem.eql(u8, stroke_kind_str, "horz")) {
-            const y, const offset = try parseBoundary(s, out_err, stroke_kind_token.end, .y);
+            const y, const offset = try parseBoundary(s, out_err, stroke_kind_token.end, .top_level, .y);
             return .{
                 .{ .op = .{ .stroke_horz = .{ .y = y } } },
                 try expectToken(s, out_err, offset, .semicolon),
             };
         } else if (std.mem.eql(u8, stroke_kind_str, "diag")) {
-            const x0, var offset = try parseBoundary(s, out_err, stroke_kind_token.end, .x);
-            const y0, offset = try parseBoundary(s, out_err, offset, .y);
-            const x1, offset = try parseBoundary(s, out_err, offset, .x);
-            const y1, offset = try parseBoundary(s, out_err, offset, .y);
+            const x0, var offset = try parseBoundary(s, out_err, stroke_kind_token.end, .top_level, .x);
+            const y0, offset = try parseBoundary(s, out_err, offset, .top_level, .y);
+            const x1, offset = try parseBoundary(s, out_err, offset, .top_level, .x);
+            const y1, offset = try parseBoundary(s, out_err, offset, .top_level, .y);
             return .{
                 .{ .op = .{ .stroke_diag = .{
                     .a = .{ .x = x0, .y = y0 },
@@ -96,8 +97,8 @@ pub fn parseOp(s: []const u8, out_err: *Error, start: usize) error{Error}!?struc
                 try expectToken(s, out_err, offset, .semicolon),
             };
         } else if (std.mem.eql(u8, stroke_kind_str, "dot")) {
-            const x, var offset = try parseBoundary(s, out_err, stroke_kind_token.end, .x);
-            const y, offset = try parseBoundary(s, out_err, offset, .y);
+            const x, var offset = try parseBoundary(s, out_err, stroke_kind_token.end, .top_level, .x);
+            const y, offset = try parseBoundary(s, out_err, offset, .top_level, .y);
             return .{
                 .{ .op = .{ .stroke_dot = .{ .x = x, .y = y } } },
                 try expectToken(s, out_err, offset, .semicolon),
@@ -128,22 +129,22 @@ fn parseClip(
             if (clip.left != null) return out_err.set(.{ .duplicate_property = property_token });
             const eq = try nextToken(s, out_err, property_token.end);
             if (eq.kind != .eq) return out_err.set(.{ .unexpected_token = eq });
-            clip.left, offset = try parseBoundary(s, out_err, eq.end, .x);
+            clip.left, offset = try parseBoundary(s, out_err, eq.end, .top_level, .x);
         } else if (std.mem.eql(u8, property, "right")) {
             if (clip.right != null) return out_err.set(.{ .duplicate_property = property_token });
             const eq = try nextToken(s, out_err, property_token.end);
             if (eq.kind != .eq) return out_err.set(.{ .unexpected_token = eq });
-            clip.right, offset = try parseBoundary(s, out_err, eq.end, .x);
+            clip.right, offset = try parseBoundary(s, out_err, eq.end, .top_level, .x);
         } else if (std.mem.eql(u8, property, "top")) {
             if (clip.top != null) return out_err.set(.{ .duplicate_property = property_token });
             const eq = try nextToken(s, out_err, property_token.end);
             if (eq.kind != .eq) return out_err.set(.{ .unexpected_token = eq });
-            clip.top, offset = try parseBoundary(s, out_err, eq.end, .y);
+            clip.top, offset = try parseBoundary(s, out_err, eq.end, .top_level, .y);
         } else if (std.mem.eql(u8, property, "bottom")) {
             if (clip.bottom != null) return out_err.set(.{ .duplicate_property = property_token });
             const eq = try nextToken(s, out_err, property_token.end);
             if (eq.kind != .eq) return out_err.set(.{ .unexpected_token = eq });
-            clip.bottom, offset = try parseBoundary(s, out_err, eq.end, .y);
+            clip.bottom, offset = try parseBoundary(s, out_err, eq.end, .top_level, .y);
         } else if (std.mem.eql(u8, property, "count")) {
             @panic("todo");
         } else return out_err.set(.{ .unexpected_token = property_token });
@@ -165,6 +166,7 @@ fn parseBoundary(
     s: []const u8,
     out_err: *Error,
     start: usize,
+    context: enum { top_level, inside_between },
     comptime dimension: design.Dimension,
 ) error{Error}!struct { design.Boundary(dimension), usize } {
     const base_token = try nextToken(s, out_err, start);
@@ -172,9 +174,24 @@ fn parseBoundary(
 
     const BoundaryBase = design.BoundaryBase(dimension);
     if (std.mem.eql(u8, base_token_str, "between")) {
-        var offset = try expectToken(s, out_err, base_token.end, .open_paren);
-        _ = &offset;
-        @panic("todo: parse between");
+        if (context == .inside_between) return out_err.set(.{ .recursive_between = base_token });
+        const open_paren_end = try expectToken(s, out_err, base_token.end, .open_paren);
+        const from, const from_end = try parseBoundary(s, out_err, open_paren_end, .inside_between, dimension);
+        const to, const to_end = try parseBoundary(s, out_err, from_end, .inside_between, dimension);
+
+        const num_token = try nextToken(s, out_err, to_end);
+        if (num_token.kind != .num) return out_err.set(.{ .unexpected_token = num_token });
+        const num_str = s[num_token.start..num_token.end];
+
+        const num_f32 = std.fmt.parseFloat(f32, num_str) catch return out_err.set(.{ .bad_number = num_token });
+        const close_paren_end = try expectToken(s, out_err, num_token.end, .close_paren);
+        return .{
+            .{
+                .value = from.value,
+                .between = .{ .to = to.value, .ratio = num_f32 },
+            },
+            close_paren_end,
+        };
     }
     inline for (std.meta.fields(BoundaryBase)) |field| {
         if (std.mem.eql(u8, base_token_str, field.name)) {
@@ -208,10 +225,10 @@ fn parseAdjust(
             const num: u32 = std.fmt.parseInt(u32, num_str, 10) catch return out_err.set(.{ .unexpected_token = num_token });
             const adjust: i8 = blk: {
                 if (mod_token.kind == .pos) {
-                    break :blk std.math.cast(i8, num) orelse return out_err.set(.{ .overflow = num });
+                    break :blk std.math.cast(i8, num) orelse return out_err.set(.{ .bad_number = num_token });
                 }
-                const num_i32 = std.math.cast(i32, num) orelse return out_err.set(.{ .overflow = num });
-                break :blk std.math.cast(i8, -num_i32) orelse return out_err.set(.{ .overflow = num });
+                const num_i32 = std.math.cast(i32, num) orelse return out_err.set(.{ .bad_number = num_token });
+                break :blk std.math.cast(i8, -num_i32) orelse return out_err.set(.{ .bad_number = num_token });
             };
             return .{ adjust, num_token.end };
         },
@@ -344,11 +361,11 @@ test {
         (try parseOp("stroke diag uppercase_left-1 base uppercase_right+1 uppercase_top;", &err, 0)).?[0],
     );
 
-    // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    if (false) try std.testing.expectEqual(
-        design.Op{ .op = .{ .stroke_vert = .{
-            .x = .{ .base = .center, .between = .{ .base = .uppercase_right, .ratio = 0.5 }, .half_stroke_adjust = -2 },
-        } } },
-        (try parseOp("stroke vert between(center 0.5 uppercase_right)-2;", &err, 0)).?[0],
+    try std.testing.expectEqual(
+        design.Op{ .op = .{ .stroke_vert = .{ .x = .{
+            .value = .{ .base = .center, .adjust = -3 },
+            .between = .{ .to = .{ .base = .uppercase_right, .adjust = 5 }, .ratio = 0.5 },
+        } } } },
+        (try parseOp("stroke vert between(center-3 uppercase_right+5 0.5);", &err, 0)).?[0],
     );
 }

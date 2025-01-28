@@ -107,11 +107,11 @@ pub fn reloadFile(self: *DesignMode) void {
                 "unexpected token {} at offset {}",
                 .{ token.fmt(content), token.start },
             ),
-            .overflow => |value| return self.setFileParseError(
+            .bad_number => |token| return self.setFileParseError(
                 file,
                 content,
-                "number overflow {}",
-                .{value},
+                "bad number '{s}' at offset {}",
+                .{ content[token.start..token.end], token.start },
             ),
             .duplicate_property => |token| return self.setFileParseError(
                 file,
@@ -119,6 +119,13 @@ pub fn reloadFile(self: *DesignMode) void {
 
                 "duplicate property '{s}' at offset {}",
                 .{ content[token.start..token.end], token.start },
+            ),
+            .recursive_between => |token| return self.setFileParseError(
+                file,
+                content,
+
+                "recursive between at offset {}",
+                .{token.start},
             ),
         }) orelse break;
         self.ops.append(self.arena.allocator(), op) catch |e| oom(e);

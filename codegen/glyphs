@@ -145,7 +145,31 @@
 #    } },
 #};
 #
-
+--- A
+clip top=uppercase_top-1 bottom=base+1;
+stroke diag uppercase_left base center uppercase_top-1;
+stroke diag uppercase_right base center uppercase_top-1;
+clip left=between(uppercase_left center 0.3) right=between(uppercase_right center 0.3);
+stroke horz between(base uppercase_top 0.3);
+--- E
+clip
+    left=uppercase_left-1 right=uppercase_right+1
+    top=uppercase_top-1 bottom=base+1
+;
+stroke vert uppercase_left;
+stroke horz uppercase_top;
+stroke horz base;
+clip right=between(center uppercase_right 0.7);
+stroke horz uppercase_center;
+--- F
+clip
+    left=uppercase_left-1 right=uppercase_right+1
+    top=uppercase_top-1 bottom=base+1
+;
+stroke vert uppercase_left;
+stroke horz uppercase_top;
+clip right=between(center uppercase_right 0.7);
+stroke horz uppercase_center;
 --- H
 clip
     left=uppercase_left-1 right=uppercase_right+1
@@ -154,6 +178,14 @@ clip
 stroke vert uppercase_left;
 stroke vert uppercase_right;
 stroke horz uppercase_center;
+--- I
+clip
+    left=uppercase_left-1 right=uppercase_right+1
+    top=uppercase_top-1 bottom=base+1
+;
+stroke vert center;
+stroke horz uppercase_top;
+stroke horz base;
 --- L
 clip left=uppercase_left-1 right=uppercase_right+1 top=uppercase_top-1 bottom=base+1;
 stroke vert uppercase_left;
