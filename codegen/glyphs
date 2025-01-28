@@ -288,6 +288,32 @@ clip right=between(std_left std_right 0.45);
 stroke horz uppercase_top;
 stroke horz base;
 stroke horz uppercase_center;
+--- C
+stroke curve
+    std_left between(uppercase_top base 0.3)
+    std_left uppercase_top
+    center uppercase_top
+;
+clip count=1 bottom=between(uppercase_top base 0.3);
+stroke curve
+    center uppercase_top
+    std_right uppercase_top
+    std_right between(uppercase_top base 0.3)
+;
+
+stroke curve
+    std_left between(base uppercase_top 0.3)
+    std_left base
+    center base
+;
+clip count=1 top=between(base uppercase_top 0.3);
+stroke curve
+    center base
+    std_right base
+    std_right between(base uppercase_top 0.3)
+;
+clip bottom=between(base uppercase_top 0.3) top=between(uppercase_top base 0.3);
+stroke vert std_left;
 --- E
 clip
     left=std_left-1 right=std_right+1
