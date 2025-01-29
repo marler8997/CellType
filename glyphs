@@ -439,6 +439,20 @@ stroke curve
     std_left bottom
     std_left between(base bottom 0.4)
 ;
+--- k
+clip left=between(std_left std_right 0.1)-1;
+clip count=1 top=between(base uppercase_top 0.9);
+stroke diag
+    between(std_left std_right 0.1) between(base uppercase_top 0.33)
+    between(std_left std_right 0.9) between(base uppercase_top 0.9)
+;
+clip count=1 left=between(std_left std_right 0.312) bottom=base+1;
+stroke diag
+    between(std_left std_right 0.2) between(base uppercase_top 0.6)
+    between(std_left std_right 0.9) base+1
+;
+clip top=uppercase_top-1 bottom=base+1;
+stroke vert between(std_left std_right 0.1);
 --- o
 stroke curve
     std_left lowercase_center
