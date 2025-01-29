@@ -21,10 +21,12 @@ const PixelBoundary = @import("PixelBoundary.zig");
 //    l = left, r = right
 //    t = top, b = bottom
 
-pub const default_weight: f32 = 0.2;
+pub const default_weight: f32 = 0.1;
 pub fn calcStrokeWidth(comptime T: type, width: T, height: T, weight: f32) T {
-    const width_f32: f32 = @floatFromInt(@min(width, height));
-    return @max(1, @as(T, @intFromFloat(@round(width_f32 * weight))));
+    const x_candidate: T = @intFromFloat(@round(weight * @as(f32, @floatFromInt(width))));
+    // the "y" dimension needs a bit more room, so default stroke width is smaller
+    const y_candidate: T = @intFromFloat(@round(weight * @as(f32, @floatFromInt(height)) * 0.7));
+    return @max(1, @min(x_candidate, y_candidate));
 }
 
 pub fn clear(
