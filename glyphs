@@ -634,6 +634,21 @@ clip count=1 right=between(std_left std_right 0.9)+1;
 stroke horz between(base uppercase_top 0.6);
 clip count=1 bottom= between(base uppercase_top 0.2);
 stroke vert between(std_left std_right 0.36);
+--- u
+clip top=lowercase_top-1 bottom=base+1;
+stroke curve
+    std_left lowercase_center
+    std_left base
+    center base
+;
+stroke curve
+    center base
+    std_right between(base lowercase_top 0.1)
+    std_right lowercase_center
+;
+clip count=1 bottom=lowercase_center+1;
+stroke vert std_left;
+stroke vert std_right;
 --- A
 clip top=uppercase_top-1 bottom=base+1;
 stroke diag std_left base center uppercase_top-1;
