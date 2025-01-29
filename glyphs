@@ -487,6 +487,21 @@ stroke curve
 clip top=lowercase_center;
 stroke vert center;
 stroke vert between(std_left std_right 1.1);
+--- n
+clip top=lowercase_top-1 bottom=base+1;
+stroke curve
+    std_right lowercase_center
+    std_right lowercase_top
+    center lowercase_top
+;
+stroke curve
+    std_left lowercase_center
+    std_left between(lowercase_top base 0.1)
+    center lowercase_top
+;
+clip count=1 top=lowercase_center-1;
+stroke vert std_right;
+stroke vert std_left;
 --- o
 stroke curve
     std_left lowercase_center
