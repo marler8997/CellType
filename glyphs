@@ -569,6 +569,20 @@ stroke curve
 ;
 clip top=lowercase_top-1 bottom=bottom;
 stroke vert std_right;
+--- r
+clip top=lowercase_top-1 bottom=base+1;
+stroke vert between(std_left std_right 0.15);
+stroke curve
+    between(std_left std_right 0.15) lowercase_center
+    between(std_left std_right 0.15) lowercase_top
+    between(std_left std_right 0.5) lowercase_top
+;
+clip bottom=between(base lowercase_top 0.75);
+stroke curve
+    between(std_left std_right 0.5) lowercase_top
+    between(std_left std_right 0.85) lowercase_top
+    between(std_left std_right 0.85) between(base lowercase_top 0.75)
+;
 --- A
 clip top=uppercase_top-1 bottom=base+1;
 stroke diag std_left base center uppercase_top-1;
