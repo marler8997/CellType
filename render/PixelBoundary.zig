@@ -160,7 +160,6 @@ pub fn between(self: PixelBoundary, other: PixelBoundary, ratio: f32) PixelBound
     const lerped: i32 = @intFromFloat(@round(
         std.math.lerp(@as(f32, 0), @as(f32, @floatFromInt(diff)), ratio),
     ));
-    std.debug.assert(@abs(lerped) <= @abs(diff));
     return .{
         .slot = self.slot + lerped,
     };

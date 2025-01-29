@@ -461,6 +461,32 @@ clip count=1 left=between(std_left-1 std_right 0.1) right=between(std_right+1 st
 stroke horz base;
 clip top=uppercase_top+1;
 stroke vert center;
+--- m
+clip bottom=base+1 top=lowercase_top-1;
+stroke vert between(std_right std_left 1.1);
+stroke curve
+    between(std_right std_left 1.1) lowercase_center
+    between(std_right std_left 1.1) lowercase_top
+    between(std_left center 0.45) lowercase_top
+;
+stroke curve
+    between(std_left center 0.45) lowercase_top
+    center lowercase_top
+    center lowercase_center
+;
+stroke curve
+    center lowercase_center
+    center lowercase_top
+    between(std_right center 0.45) lowercase_top
+;
+stroke curve
+    between(std_right center 0.45) lowercase_top
+    between(std_left std_right 1.1) lowercase_top
+    between(std_left std_right 1.1) lowercase_center
+;
+clip top=lowercase_center;
+stroke vert center;
+stroke vert between(std_left std_right 1.1);
 --- o
 stroke curve
     std_left lowercase_center
