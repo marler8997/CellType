@@ -583,6 +583,39 @@ stroke curve
     between(std_left std_right 0.85) lowercase_top
     between(std_left std_right 0.85) between(base lowercase_top 0.75)
 ;
+--- s
+stroke curve
+    std_left between(lowercase_top base 0.25)
+    std_left lowercase_top
+    center lowercase_top
+;
+clip count=1 bottom=between(lowercase_top base 0.25);
+stroke curve
+    std_right between(lowercase_top base 0.25)
+    std_right lowercase_top
+    center lowercase_top
+;
+clip count=1 top=between(base lowercase_top 0.25);
+stroke curve
+    std_left between(base lowercase_top 0.25)
+    std_left base
+    center base
+;
+stroke curve
+    std_right between(base lowercase_top 0.25)
+    std_right base
+    center base
+;
+stroke curve
+    std_right between(base lowercase_top 0.25)
+    between(std_right std_left 0.1) between(base lowercase_top 0.45)
+    center lowercase_center
+;
+stroke curve
+    center lowercase_center
+    between(std_left std_right 0.1) between(lowercase_top base 0.45)
+    std_left between(lowercase_top base 0.25)
+;
 --- A
 clip top=uppercase_top-1 bottom=base+1;
 stroke diag std_left base center uppercase_top-1;
