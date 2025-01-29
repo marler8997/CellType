@@ -301,7 +301,6 @@ fn updateOp(self: *DesignMode, direction: enum { left, right }) void {
 
 fn getDefault(op: celltype.design.OpTag) celltype.design.Op {
     return switch (op) {
-        .todo => .todo,
         .branch => .{ .branch = .{ .count = 1, .condition = .serif } },
         .clip => .{ .clip = .{ .left = .{ .value = .{
             .base = .center,

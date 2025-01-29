@@ -128,10 +128,8 @@ fn getOps(grapheme_utf8: []const u8) error{Utf8Decode}!struct { usize, []const d
             if (@hasDecl(glyphs, &[_]u8{c})) return .{ utf8_len, &@field(glyphs, &[_]u8{c}) };
         },
     };
-    return .{ utf8_len, &todo };
+    return .{ utf8_len, &glyphs.nodef };
 }
-
-const todo = [_]design.Op{.todo};
 
 const ClipBoundaries = struct {
     row_start: usize,
@@ -338,16 +336,6 @@ const shaders = struct {
             },
             half_stroke,
         );
-    }
-    fn todo(w: i32, h: i32, stroke_width: i32, col: i32, row: i32, args: *const void) ShaderResult {
-        _ = w;
-        _ = h;
-        _ = stroke_width;
-        _ = col;
-        _ = row;
-        _ = args;
-        // TODO: draw something more recognizable like a ? or something
-        return .{ .max_candidate = 200 };
     }
 };
 

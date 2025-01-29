@@ -269,7 +269,6 @@ pub const Branch = struct {
 
 pub const OpTag = enum {
     branch,
-    todo,
     clip,
     stroke_vert,
     stroke_horz,
@@ -281,7 +280,6 @@ pub const op_count = std.meta.fields(OpTag).len;
 
 pub const Op = union(OpTag) {
     branch: Branch,
-    todo: void,
     clip: Clip,
     stroke_vert: StrokeVert,
     stroke_horz: StrokeHorz,
@@ -299,7 +297,6 @@ pub const Op = union(OpTag) {
         _ = options;
         switch (self) {
             .branch => |b| try writer.print("condition {}", .{b}),
-            .todo => try writer.writeAll("todo"),
             .clip => |c| try writer.print("clip {}", .{c}),
             .stroke_vert => |s| try writer.print("stroke vert {}", .{s}),
             .stroke_horz => |s| try writer.print("stroke horz {}", .{s}),

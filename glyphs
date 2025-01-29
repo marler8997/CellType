@@ -1,3 +1,10 @@
+--- nodef
+stroke vert left_edge;
+stroke vert right_edge;
+stroke horz top_edge;
+stroke horz bottom_edge;
+stroke diag left_edge bottom_edge right_edge top_edge;
+stroke diag left_edge top_edge right_edge bottom_edge;
 --- 0
 stroke curve
     std_left number_center
