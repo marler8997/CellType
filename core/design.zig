@@ -28,6 +28,7 @@ pub const BoundaryBaseY = enum {
     /// center of a stroke where the bottom touches the baseline
     base,
 
+    top_edge,
     bottom_edge,
 };
 

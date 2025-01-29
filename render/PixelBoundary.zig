@@ -39,6 +39,9 @@ pub fn fromRounded(rounded: i32, bias: Bias) PixelBoundary {
         .neg => 0,
     }) };
 }
+pub fn getRoundedBias(self: PixelBoundary) Bias {
+    return if (@rem(self.slot, 2) == 0) .neg else .pos;
+}
 
 pub fn fromDesignX(w: i32, stroke_width: i32, x: design.BoundaryX) PixelBoundary {
     const boundary = fromDesignBaseX(w, stroke_width, x.value.base).adjust(stroke_width, x.value.adjust);
@@ -51,6 +54,44 @@ pub fn fromDesignY(h: i32, stroke_width: i32, y: design.BoundaryY) PixelBoundary
     return boundary.betweenY(h, stroke_width, bet).adjust(stroke_width, bet.adjust);
 }
 
+test "fromDesign" {
+    for (1..20) |size_usize| {
+        const size: i32 = @intCast(size_usize);
+        for (1..10) |stroke_width_usize| {
+            const stroke_width: i32 = @intCast(stroke_width_usize);
+
+            {
+                const b = fromDesignX(size, stroke_width, .{ .value = .{ .base = .left_edge } });
+                try std.testing.expectEqual(
+                    0,
+                    b.adjust(stroke_width, 1).getRounded() - stroke_width,
+                );
+            }
+            {
+                const b = fromDesignX(size, stroke_width, .{ .value = .{ .base = .right_edge } });
+                try std.testing.expectEqual(
+                    size,
+                    b.adjust(stroke_width, -1).getRounded() + stroke_width,
+                );
+            }
+            {
+                const b = fromDesignY(size, stroke_width, .{ .value = .{ .base = .top_edge } });
+                try std.testing.expectEqual(
+                    0,
+                    b.adjust(stroke_width, 1).getRounded() - stroke_width,
+                );
+            }
+            {
+                const b = fromDesignY(size, stroke_width, .{ .value = .{ .base = .bottom_edge } });
+                try std.testing.expectEqual(
+                    size,
+                    b.adjust(stroke_width, -1).getRounded() + stroke_width,
+                );
+            }
+        }
+    }
+}
+
 pub fn fromDesignBaseX(w: i32, stroke_width: i32, x: design.BoundaryBaseX) PixelBoundary {
     // if x is large enough, we just always use the same floating point
     // multiplier for the position
@@ -58,8 +99,8 @@ pub fn fromDesignBaseX(w: i32, stroke_width: i32, x: design.BoundaryBaseX) Pixel
         .std_left => 0.210,
         .center => 0.4999,
         .std_right => return fromDesignBaseX(w, stroke_width, .std_left).centerReflect(w),
-        .left_edge => return PixelBoundary.fromRounded(0, .pos),
-        .right_edge => return PixelBoundary.fromRounded(w, .neg),
+        .left_edge => return PixelBoundary{ .slot = stroke_width },
+        .right_edge => return PixelBoundary{ .slot = 2 * w - stroke_width },
     };
     return PixelBoundary.initFloat(large_enough_ratio * @as(f32, @floatFromInt(w)));
 }
@@ -128,7 +169,8 @@ pub fn fromDesignBaseY(h: i32, stroke_width: i32, y: design.BoundaryBaseY) Pixel
             0.5,
         ),
         .base => 0.71,
-        .bottom_edge => return PixelBoundary.fromRounded(h, .neg).adjust(stroke_width, -1),
+        .top_edge => return PixelBoundary{ .slot = stroke_width },
+        .bottom_edge => return PixelBoundary{ .slot = 2 * h - stroke_width },
     };
     return PixelBoundary.initFloat(large_enough_ratio * @as(f32, @floatFromInt(h)));
 }
@@ -176,9 +218,13 @@ pub fn format(
 ) @TypeOf(writer).Error!void {
     _ = fmt;
     _ = options;
-    try writer.print("{}({c} bias)", .{
+    try writer.print("slot {}(rounded to {} with {c} bias)", .{
+        self.slot,
         self.getRounded(),
-        @as(u8, if (@rem(self.slots, 2) == 0) '-' else '+'),
+        @as(u8, switch (self.getRoundedBias()) {
+            .neg => '-',
+            .pos => '+',
+        }),
     });
 }
 
