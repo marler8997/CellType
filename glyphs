@@ -422,6 +422,23 @@ clip count=1 left=between(std_left-1 std_right 0.1) right=between(std_right+1 st
 stroke horz base;
 clip top=lowercase_top+1;
 stroke vert center;
+--- j
+stroke dot between(std_left std_right 0.7) lowercase_dot;
+clip count=1 right=between(std_left std_right 0.7)+1 left=between(std_left std_right 0.23);
+stroke horz lowercase_top;
+clip count=1 top=lowercase_top+1 bottom=between(base bottom 0.4);
+stroke vert between(std_left std_right 0.7);
+stroke curve
+    between(std_left std_right 0.7) between(base bottom 0.4)
+    between(std_left std_right 0.7) bottom
+    between(std_left std_right 0.35) bottom
+;
+clip count=1 top=between(base bottom 0.4);
+stroke curve
+    between(std_left std_right 0.35) bottom
+    std_left bottom
+    std_left between(base bottom 0.4)
+;
 --- o
 stroke curve
     std_left lowercase_center
