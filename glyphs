@@ -416,7 +416,11 @@ stroke vert std_left;
 --- i
 clip bottom=base+1;
 stroke dot center lowercase_dot;
-clip top=lowercase_top-1;
+clip count=1 left=between(std_left-1 std_right 0.23) right=center+1;
+stroke horz lowercase_top;
+clip count=1 left=between(std_left-1 std_right 0.1) right=between(std_right+1 std_left 0.1);
+stroke horz base;
+clip top=lowercase_top+1;
 stroke vert center;
 --- o
 stroke curve
