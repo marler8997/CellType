@@ -128,7 +128,7 @@ pub fn fromDesignBaseY(h: i32, stroke_width: i32, y: design.BoundaryBaseY) Pixel
             0.5,
         ),
         .base => 0.71,
-        .bottom => return PixelBoundary.fromRounded(h, .neg).adjust(stroke_width, -1),
+        .bottom_edge => return PixelBoundary.fromRounded(h, .neg).adjust(stroke_width, -1),
     };
     return PixelBoundary.initFloat(large_enough_ratio * @as(f32, @floatFromInt(h)));
 }

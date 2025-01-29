@@ -27,7 +27,7 @@ pub const BoundaryBaseY = enum {
     /// center of a stroke where the bottom touches the baseline
     base,
 
-    bottom,
+    bottom_edge,
 };
 
 pub const AdjustableBoundaryX = struct {

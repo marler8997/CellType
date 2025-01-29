@@ -385,18 +385,18 @@ stroke curve
     std_right between(lowercase_top base 0.1)
     center lowercase_top
 ;
-clip count=1 top=lowercase_top-1 bottom=between(base bottom 0.4);
+clip count=1 top=lowercase_top-1 bottom=between(base bottom_edge 0.4);
 stroke vert std_right;
 stroke curve
-    std_right between(base bottom 0.4)
-    std_right bottom
-    center bottom
+    std_right between(base bottom_edge 0.4)
+    std_right bottom_edge
+    center bottom_edge
 ;
-clip count=1 top=between(base bottom 0.4);
+clip count=1 top=between(base bottom_edge 0.4);
 stroke curve
-    std_left between(base bottom 0.4)
-    std_left bottom
-    center bottom
+    std_left between(base bottom_edge 0.4)
+    std_left bottom_edge
+    center bottom_edge
 ;
 --- h
 clip top=uppercase_top-1 bottom=base+1;
@@ -426,18 +426,18 @@ stroke vert center;
 stroke dot between(std_left std_right 0.7) lowercase_dot;
 clip count=1 right=between(std_left std_right 0.7)+1 left=between(std_left std_right 0.23);
 stroke horz lowercase_top;
-clip count=1 top=lowercase_top+1 bottom=between(base bottom 0.4);
+clip count=1 top=lowercase_top+1 bottom=between(base bottom_edge 0.4);
 stroke vert between(std_left std_right 0.7);
 stroke curve
-    between(std_left std_right 0.7) between(base bottom 0.4)
-    between(std_left std_right 0.7) bottom
-    between(std_left std_right 0.35) bottom
+    between(std_left std_right 0.7) between(base bottom_edge 0.4)
+    between(std_left std_right 0.7) bottom_edge
+    between(std_left std_right 0.35) bottom_edge
 ;
-clip count=1 top=between(base bottom 0.4);
+clip count=1 top=between(base bottom_edge 0.4);
 stroke curve
-    between(std_left std_right 0.35) bottom
-    std_left bottom
-    std_left between(base bottom 0.4)
+    between(std_left std_right 0.35) bottom_edge
+    std_left bottom_edge
+    std_left between(base bottom_edge 0.4)
 ;
 --- k
 clip left=between(std_left std_right 0.1)-1;
@@ -544,7 +544,7 @@ stroke curve
     std_left between(lowercase_top base 0.1)
     center lowercase_top
 ;
-clip top=lowercase_top-1 bottom=bottom+1;
+clip top=lowercase_top-1 bottom=bottom_edge+1;
 stroke vert std_left;
 --- q
 stroke curve
@@ -567,7 +567,7 @@ stroke curve
     std_right between(lowercase_top base 0.1)
     center lowercase_top
 ;
-clip top=lowercase_top-1 bottom=bottom;
+clip top=lowercase_top-1 bottom=bottom_edge+1;
 stroke vert std_right;
 --- r
 clip top=lowercase_top-1 bottom=base+1;
