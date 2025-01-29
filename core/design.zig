@@ -13,7 +13,6 @@ pub const BoundaryBaseY = enum {
     number_center,
     number_bottom_quarter,
 
-    /// center of uppercase top
     uppercase_top,
     uppercase_top_quarter,
     uppercase_center,
@@ -25,6 +24,8 @@ pub const BoundaryBaseY = enum {
 
     /// center of a stroke where the bottom touches the baseline
     base,
+
+    bottom,
 };
 
 pub const AdjustableBoundaryX = struct {

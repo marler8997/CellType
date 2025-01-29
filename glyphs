@@ -364,6 +364,40 @@ clip count=1 top=between(base uppercase_top 0.8);
 stroke vert between(std_left std_right 0.36);
 clip count=1 right=between(std_left std_right 0.9)+1;
 stroke horz between(base uppercase_top 0.5);
+--- g
+stroke curve
+    std_left lowercase_center
+    std_left lowercase_top
+    center lowercase_top
+;
+stroke curve
+    std_left lowercase_center
+    std_left base
+    center base
+;
+stroke curve
+    std_right lowercase_center
+    std_right between(base lowercase_top 0.1)
+    center base
+;
+stroke curve
+    std_right lowercase_center
+    std_right between(lowercase_top base 0.1)
+    center lowercase_top
+;
+clip count=1 top=lowercase_top-1 bottom=between(base bottom 0.4);
+stroke vert std_right;
+stroke curve
+    std_right between(base bottom 0.4)
+    std_right bottom
+    center bottom
+;
+clip count=1 top=between(base bottom 0.4);
+stroke curve
+    std_left between(base bottom 0.4)
+    std_left bottom
+    center bottom
+;
 --- i
 clip bottom=base+1;
 stroke dot center lowercase_dot;
