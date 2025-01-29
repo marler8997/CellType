@@ -55,9 +55,11 @@ pub fn fromDesignBaseX(w: i32, stroke_width: i32, x: design.BoundaryBaseX) Pixel
     // if x is large enough, we just always use the same floating point
     // multiplier for the position
     const large_enough_ratio: f32 = switch (x) {
+        .leftmost => return PixelBoundary.fromRounded(0, .pos),
         .std_left => 0.210,
         .center => 0.4999,
         .std_right => return fromDesignBaseX(w, stroke_width, .std_left).centerReflect(w),
+        .rightmost => return PixelBoundary.fromRounded(w, .neg),
     };
     return PixelBoundary.initFloat(large_enough_ratio * @as(f32, @floatFromInt(w)));
 }
