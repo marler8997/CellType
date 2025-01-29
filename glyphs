@@ -453,6 +453,14 @@ stroke diag
 ;
 clip top=uppercase_top-1 bottom=base+1;
 stroke vert between(std_left std_right 0.1);
+--- l
+clip bottom=base+1;
+clip count=1 left=between(std_left-1 std_right 0.23) right=center+1;
+stroke horz uppercase_top;
+clip count=1 left=between(std_left-1 std_right 0.1) right=between(std_right+1 std_left 0.1);
+stroke horz base;
+clip top=uppercase_top+1;
+stroke vert center;
 --- o
 stroke curve
     std_left lowercase_center
