@@ -347,6 +347,23 @@ stroke curve
     std_right base
     center base
 ;
+--- f
+clip bottom=base+1 left=between(std_left std_right 0.1)-1;
+stroke curve
+    between(std_left std_right 0.36) between(base uppercase_top 0.8)
+    between(std_left std_right 0.36) uppercase_top
+    between(std_left std_right 0.7) uppercase_top
+;
+clip count=1 bottom=between(base uppercase_top 0.8);
+stroke curve
+    between(std_left std_right 0.7) uppercase_top
+    std_right uppercase_top
+    std_right between(base uppercase_top 0.8)
+;
+clip count=1 top=between(base uppercase_top 0.8);
+stroke vert between(std_left std_right 0.36);
+clip count=1 right=between(std_left std_right 0.9)+1;
+stroke horz between(base uppercase_top 0.5);
 --- i
 clip bottom=base+1;
 stroke dot center lowercase_dot;
