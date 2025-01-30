@@ -656,6 +656,12 @@ stroke curve
 clip count=1 bottom=lowercase_center+1;
 stroke vert std_left;
 stroke vert std_right;
+--- v
+clip top=lowercase_top-1 bottom=base+1;
+clip count=1 right=center;
+stroke diag center base std_left lowercase_top;
+clip count=1 left=center;
+stroke diag center base std_right lowercase_top;
 --- A
 clip top=uppercase_top-1 bottom=base+1;
 stroke diag std_left base center uppercase_top-1;
