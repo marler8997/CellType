@@ -671,6 +671,10 @@ clip count=1 left=between(std_left std_right 0.16) right=center;
 stroke diag between(std_left std_right 0.16)+1 base center between(base lowercase_top 0.6);
 clip count=1 right=between(std_right std_left 0.16) left=center;
 stroke diag between(std_right std_left 0.16)-1 base center between(base lowercase_top 0.6);
+--- x
+clip top=lowercase_top-1 bottom=base+1;
+stroke diag std_left lowercase_top-1 std_right base+1;
+stroke diag std_left base+1 std_right lowercase_top-1;
 --- A
 clip top=uppercase_top-1 bottom=base+1;
 stroke diag std_left base center uppercase_top-1;
