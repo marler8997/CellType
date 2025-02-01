@@ -662,6 +662,15 @@ clip count=1 right=center;
 stroke diag center base std_left lowercase_top;
 clip count=1 left=center;
 stroke diag center base std_right lowercase_top;
+--- w
+clip top=lowercase_top-1 bottom=base+1;
+stroke diag between(std_right std_left 1.1) lowercase_top between(std_left std_right 0.16) base;
+stroke diag between(std_left std_right 1.1) lowercase_top between(std_right std_left 0.16) base;
+clip top=between(base lowercase_top 0.6)-1;
+clip count=1 left=between(std_left std_right 0.16) right=center;
+stroke diag between(std_left std_right 0.16)+1 base center between(base lowercase_top 0.6);
+clip count=1 right=between(std_right std_left 0.16) left=center;
+stroke diag between(std_right std_left 0.16)-1 base center between(base lowercase_top 0.6);
 --- A
 clip top=uppercase_top-1 bottom=base+1;
 stroke diag std_left base center uppercase_top-1;
