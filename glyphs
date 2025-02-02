@@ -859,6 +859,19 @@ stroke diag
 clip left=std_left-1 right=std_right+1 top=uppercase_top-1 bottom=base+1;
 stroke vert std_left;
 stroke horz base;
+--- M
+clip top=uppercase_top-1 bottom=base+1;
+stroke vert between(std_right std_left 1.1);
+stroke vert between(std_left std_right 1.1);
+clip count=2 bottom=uppercase_center;
+stroke diag
+    between(std_right std_left 1.1) uppercase_top-1
+    center uppercase_center
+;
+stroke diag
+    between(std_left std_right 1.1) uppercase_top-1
+    center uppercase_center
+;
 --- N
 clip left=std_left-1 right=std_right+1 top=uppercase_top-1 bottom=base+1;
 stroke vert std_left;
