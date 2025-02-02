@@ -914,6 +914,32 @@ stroke curve
 clip right=between(std_left std_right 0.45);
 stroke horz uppercase_top;
 stroke horz uppercase_center;
+--- Q
+stroke curve
+    std_left uppercase_center
+    std_left uppercase_top
+    center uppercase_top
+;
+stroke curve
+    std_right uppercase_center
+    std_right uppercase_top
+    center uppercase_top
+;
+stroke curve
+    std_left uppercase_center
+    std_left base
+    center base
+;
+stroke curve
+    std_right uppercase_center
+    std_right base
+    center base
+;
+stroke curve
+    center base
+    center between(base bottom_edge 0.5)
+    std_right between(base bottom_edge 0.5)
+;
 --- T
 clip left=std_left-1 right=std_right+1 top=uppercase_top-1 bottom=base+1;
 stroke vert center;
