@@ -201,8 +201,6 @@ fn updateLayout(
     views.ensureTotalCapacity(allocator, view_inputs.len) catch |e| oom(e);
     views.clearRetainingCapacity();
 
-    const grid_line_size: i32 = pxFromPt(render_scale, 1.0);
-
     var view_y: i32 = window_margin;
 
     for (view_inputs) |*view_input| {
@@ -210,10 +208,10 @@ fn updateLayout(
         view_y += button_height;
         const zoom_out_right: i32 = window_margin + zoom_button_width;
         const zoom_in_left: i32 = zoom_out_right + pxFromPt(render_scale, 10);
-        const grid_right: i32 = window_margin + @as(i32, @intCast(view_input.cell_size.x)) * view_input.cell_pixel_size + @as(i32, @intCast(view_input.cell_size.x - 1)) * grid_line_size;
+        const grid_right: i32 = window_margin + @as(i32, @intCast(view_input.cell_size.x)) * view_input.cell_pixel_size + @as(i32, @intCast(view_input.cell_size.x - 1)) * view_input.grid_line_size;
 
         const grid_top = view_y + pxFromPt(render_scale, 10);
-        const grid_bottom = grid_top + view_input.cell_size.y * view_input.cell_pixel_size + (view_input.cell_size.y - 1) * grid_line_size;
+        const grid_bottom = grid_top + view_input.cell_size.y * view_input.cell_pixel_size + (view_input.cell_size.y - 1) * view_input.grid_line_size;
         view_y = grid_bottom + pxFromPt(render_scale, 10);
 
         views.appendAssumeCapacity(.{
