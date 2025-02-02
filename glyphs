@@ -680,6 +680,11 @@ clip top=lowercase_top-1;
 clip count=1 right=center;
 stroke diag center base std_left lowercase_top;
 stroke diag center base std_right lowercase_top;
+--- z
+clip left=std_left-1 right=std_right+1 top=lowercase_top-1 bottom=base+1;
+stroke horz lowercase_top;
+stroke horz base;
+stroke diag std_left base-1 std_right lowercase_top+1;
 --- A
 clip top=uppercase_top-1 bottom=base+1;
 stroke diag std_left base center uppercase_top-1;
