@@ -1,6 +1,7 @@
 .{
     .name = "celltype",
     .version = "0.0.0",
+    .minimum_zig_version = "0.13.0",
     .dependencies = .{
         .win32 = .{
             .url = "git+https://github.com/marlersoft/zigwin32#28c6e4cdd56ab1eba9c4a83885761d2d26a181c5",
