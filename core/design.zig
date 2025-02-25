@@ -3,9 +3,15 @@ const std = @import("std");
 pub const BoundaryBaseX = enum {
     /// center of standard left stroke
     std_left,
+
     center,
     /// center of standard right stroke
     std_right,
+
+    /// center of the left stroke for the letter "m" and other wide characters like w
+    m_left,
+    /// center of the right stroke for the letter "m" and other wide characters like w
+    m_right,
 
     left_edge,
     right_edge,

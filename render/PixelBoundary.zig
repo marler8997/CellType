@@ -99,6 +99,8 @@ pub fn fromDesignBaseX(w: i32, stroke_width: i32, x: design.BoundaryBaseX) Pixel
         .std_left => 0.210,
         .center => 0.4999,
         .std_right => return fromDesignBaseX(w, stroke_width, .std_left).centerReflect(w),
+        .m_left => 0.15,
+        .m_right => return fromDesignBaseX(w, stroke_width, .m_left).centerReflect(w),
         .left_edge => return PixelBoundary{ .slot = stroke_width },
         .right_edge => return PixelBoundary{ .slot = 2 * w - stroke_width },
     };
