@@ -5,6 +5,9 @@ stroke horz top_edge;
 stroke horz bottom_edge;
 stroke diag left_edge bottom_edge right_edge top_edge;
 stroke diag left_edge top_edge right_edge bottom_edge;
+--- /
+clip bottom=between(bottom_edge top_edge 0.1)+1;
+stroke diag std_left between(bottom_edge top_edge 0.1)+1 std_right top_edge-1;
 --- 0
 stroke curve
     std_left number_center

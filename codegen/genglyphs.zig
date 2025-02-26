@@ -41,7 +41,7 @@ pub fn main() !void {
                 try writer.writeAll(") catch unreachable;\n");
             }
             const glyph = line[new_glyph_prefix.len..];
-            const quote_it = (glyph.len == 1) and (glyph[0] >= '0') and (glyph[0] <= '9');
+            const quote_it = (glyph.len == 1) and (glyph[0] >= '!') and (glyph[0] <= '9');
             const prefix: []const u8 = if (quote_it) "@\"" else "";
             const suffix: []const u8 = if (quote_it) "\"" else "";
             try writer.print(
