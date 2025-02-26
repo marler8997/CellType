@@ -1041,3 +1041,21 @@ clip left=std_left-1 right=std_right+1 top=uppercase_top-1 bottom=base+1;
 stroke horz uppercase_top;
 stroke horz base;
 stroke diag std_left base-1 std_right uppercase_top+1;
+--- [
+clip
+    left=between(std_left std_right 0.2)-1
+    right=between(std_right std_left 0.2)+1
+    bottom=between(bottom_edge top_edge 0.1)+1
+;
+stroke horz top_edge;
+stroke horz between(bottom_edge top_edge 0.1);
+stroke vert between(std_left std_right 0.2);
+--- ]
+clip
+    left=between(std_left std_right 0.2)-1
+    right=between(std_right std_left 0.2)+1
+    bottom=between(bottom_edge top_edge 0.1)+1
+;
+stroke horz top_edge;
+stroke horz between(bottom_edge top_edge 0.1);
+stroke vert between(std_right std_left 0.2);
