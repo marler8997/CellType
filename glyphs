@@ -1010,6 +1010,10 @@ stroke curve
 clip bottom=uppercase_center;
 stroke vert std_left;
 stroke vert std_right;
+--- V
+clip top=uppercase_top-1 bottom=base+1;
+stroke diag std_left uppercase_top-1 center base+1;
+stroke diag std_right uppercase_top-1 center base+1;
 --- Z
 clip left=std_left-1 right=std_right+1 top=uppercase_top-1 bottom=base+1;
 stroke horz uppercase_top;
