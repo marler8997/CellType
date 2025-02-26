@@ -1014,6 +1014,13 @@ stroke vert std_right;
 clip top=uppercase_top-1 bottom=base+1;
 stroke diag std_left uppercase_top-1 center base+1;
 stroke diag std_right uppercase_top-1 center base+1;
+--- W
+clip top=uppercase_top-1 bottom=base+1;
+stroke diag m_left uppercase_top-1 between(m_left m_right 0.25) base+1;
+stroke diag m_right uppercase_top-1 between(m_right m_left 0.25) base+1;
+clip top=between(base uppercase_top 0.8);
+stroke diag center between(base uppercase_top 0.8) between(m_left m_right 0.25) base+1;
+stroke diag center between(base uppercase_top 0.8) between(m_right m_left 0.25) base+1;
 --- Z
 clip left=std_left-1 right=std_right+1 top=uppercase_top-1 bottom=base+1;
 stroke horz uppercase_top;
