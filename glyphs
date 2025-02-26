@@ -1025,6 +1025,14 @@ stroke diag center between(base uppercase_top 0.8) between(m_right m_left 0.25) 
 clip top=uppercase_top-1 bottom=base+1;
 stroke diag std_left uppercase_top-1 std_right base+1;
 stroke diag std_left base+1 std_right uppercase_top-1;
+--- Y
+clip top=uppercase_top-1 bottom=base+1;
+clip count=1 right=center+1;
+stroke diag std_left uppercase_top-1 center uppercase_center;
+clip count=1 left=center-1;
+stroke diag std_right uppercase_top-1 center uppercase_center;
+clip count=1 top=uppercase_center;
+stroke vert center;
 --- Z
 clip left=std_left-1 right=std_right+1 top=uppercase_top-1 bottom=base+1;
 stroke horz uppercase_top;
