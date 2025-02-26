@@ -995,6 +995,21 @@ stroke curve
 clip left=std_left-1 right=std_right+1 top=uppercase_top-1 bottom=base+1;
 stroke vert center;
 stroke horz uppercase_top;
+--- U
+clip top=uppercase_top-1;
+stroke curve
+    std_left uppercase_center
+    std_left base
+    center base
+;
+stroke curve
+    std_right uppercase_center
+    std_right base
+    center base
+;
+clip bottom=uppercase_center;
+stroke vert std_left;
+stroke vert std_right;
 --- Z
 clip left=std_left-1 right=std_right+1 top=uppercase_top-1 bottom=base+1;
 stroke horz uppercase_top;
