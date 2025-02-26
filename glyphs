@@ -958,6 +958,39 @@ stroke diag between(std_left std_right 0.45) uppercase_center-1 std_right base+1
 clip right=between(std_left std_right 0.45);
 stroke horz uppercase_top;
 stroke horz uppercase_center;
+--- S
+stroke curve
+    std_left between(uppercase_top base 0.25)
+    std_left uppercase_top
+    center uppercase_top
+;
+clip count=1 bottom=between(uppercase_top base 0.25);
+stroke curve
+    std_right between(uppercase_top base 0.25)
+    std_right uppercase_top
+    center uppercase_top
+;
+clip count=1 top=between(base uppercase_top 0.25);
+stroke curve
+    std_left between(base uppercase_top 0.25)
+    std_left base
+    center base
+;
+stroke curve
+    std_right between(base uppercase_top 0.25)
+    std_right base
+    center base
+;
+stroke curve
+    std_right between(base uppercase_top 0.25)
+    std_right between(base uppercase_top 0.42)
+    center uppercase_center
+;
+stroke curve
+    center uppercase_center
+    std_left between(uppercase_top base 0.42)
+    std_left between(uppercase_top base 0.25)
+;
 --- T
 clip left=std_left-1 right=std_right+1 top=uppercase_top-1 bottom=base+1;
 stroke vert center;
