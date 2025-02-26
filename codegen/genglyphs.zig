@@ -43,11 +43,12 @@ pub fn main() !void {
             const glyph = line[new_glyph_prefix.len..];
             const quote_it = (glyph.len == 1) and ((glyph[0] >= '!') and (glyph[0] <= '9') or
                 (glyph[0] >= '[') and (glyph[0] <= '`'));
+            const escape: []const u8 = if (std.mem.eql(u8, glyph, "\\")) "\\" else "";
             const prefix: []const u8 = if (quote_it) "@\"" else "";
             const suffix: []const u8 = if (quote_it) "\"" else "";
             try writer.print(
-                "pub const {s}{s}{s} = core.lex.parseOps(\n",
-                .{ prefix, glyph, suffix },
+                "pub const {s}{s}{s}{s} = core.lex.parseOps(\n",
+                .{ prefix, escape, glyph, suffix },
             );
             inside_glyph = true;
         } else {
