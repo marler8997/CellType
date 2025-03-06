@@ -1,11 +1,12 @@
 .{
-    .name = "celltype",
+    .name = .celltype,
     .version = "0.0.0",
-    .minimum_zig_version = "0.13.0",
+    .fingerprint = 0x6ca6c62b53d56186, // Changing this has security and trust implications.
+    .minimum_zig_version = "0.14.0",
     .dependencies = .{
         .win32 = .{
-            .url = "git+https://github.com/marlersoft/zigwin32#28c6e4cdd56ab1eba9c4a83885761d2d26a181c5",
-            .hash = "1220fbd42a455a94ce2134c4080a16c99074fb28ca94df87dde3cfecccc5c8401ca9",
+            .url = "git+https://github.com/marlersoft/zigwin32#463e968fd43b98d1f4bc9e12c6eaab607a6e2e32",
+            .hash = "zigwin32-25.0.28-preview-AAAAAMco_ANvuBFnzPa3labgyPqid2015o7CWgOHtT1_",
             .lazy = true,
         },
     },

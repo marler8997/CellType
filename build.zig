@@ -12,7 +12,7 @@ pub fn build(b: *std.Build) void {
         const exe = b.addExecutable(.{
             .name = "genglyphs",
             .root_source_file = b.path("codegen/genglyphs.zig"),
-            .target = b.host,
+            .target = b.graph.host,
         });
         const run = b.addRunArtifact(exe);
         run.addFileArg(b.path("glyphs"));
